@@ -1,0 +1,107 @@
+<?php
+
+namespace App\Models;
+
+use App\Support\Localizable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Product extends Model
+{
+    use HasFactory, SoftDeletes, Localizable;
+
+    protected $guarded = [];
+
+    protected $casts = [
+        'price'            => 'decimal:2',
+        'compare_at_price' => 'decimal:2',
+        'is_active'        => 'boolean',
+        'is_featured'      => 'boolean',
+        'is_new'           => 'boolean',
+        'free_shipping'    => 'boolean',
+        'track_stock'      => 'boolean',
+    ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
+    }
+
+    public function pixels(): BelongsToMany
+    {
+        return $this->belongsToMany(Pixel::class);
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->tr('name') ?? '';
+    }
+
+    public function getShortDescAttribute(): ?string
+    {
+        return $this->tr('short_desc');
+    }
+
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->tr('description');
+    }
+
+    public function getMainImageUrlAttribute(): string
+    {
+        if ($this->main_image) {
+            return Setting::isExternal($this->main_image)
+                ? $this->main_image
+                : asset('storage/' . $this->main_image);
+        }
+
+        $first = $this->images->first();
+        if ($first) {
+            return $first->url;
+        }
+
+        return 'https://placehold.co/800x800/eef2ff/2563eb?text=' . urlencode($this->name_fr);
+    }
+
+    public function getOnSaleAttribute(): bool
+    {
+        return $this->compare_at_price && $this->compare_at_price > $this->price;
+    }
+
+    public function getDiscountPercentAttribute(): int
+    {
+        if (! $this->on_sale) {
+            return 0;
+        }
+
+        return (int) round((1 - ($this->price / $this->compare_at_price)) * 100);
+    }
+
+    public function getInStockAttribute(): bool
+    {
+        if (! $this->track_stock) {
+            return true;
+        }
+
+        return $this->stock > 0 || $this->variants->where('stock', '>', 0)->isNotEmpty();
+    }
+
+    public function scopeActive($q)
+    {
+        return $q->where('is_active', true);
+    }
+}

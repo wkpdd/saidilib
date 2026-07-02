@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\Product;
+
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $categories = Category::active()->whereNull('parent_id')
+            ->withCount('products')->orderBy('sort_order')->get();
+
+        $featured = Product::active()->where('is_featured', true)
+            ->with('category')->latest()->take(8)->get();
+
+        $newArrivals = Product::active()->where('is_new', true)
+            ->with('category')->latest()->take(8)->get();
+
+        $onSale = Product::active()->whereNotNull('compare_at_price')
+            ->whereColumn('compare_at_price', '>', 'price')
+            ->with('category')->take(8)->get();
+
+        return view('storefront.home', compact('categories', 'featured', 'newArrivals', 'onSale'));
+    }
+
+    public function about()
+    {
+        return view('storefront.about');
+    }
+
+    public function contact()
+    {
+        return view('storefront.contact');
+    }
+}

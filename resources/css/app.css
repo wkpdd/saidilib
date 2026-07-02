@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-slate-50 text-ink-900 antialiased;
+    }
+    [dir="rtl"] body {
+        text-align: right;
+    }
+}
+
+@layer components {
+    .container-x {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2;
+    }
+    .btn-primary {
+        @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 shadow-soft;
+    }
+    .btn-accent {
+        @apply btn bg-accent text-white hover:brightness-95 focus:ring-amber-400 shadow-soft;
+    }
+    .btn-ghost {
+        @apply btn bg-white text-ink-900 ring-1 ring-slate-200 hover:bg-slate-50;
+    }
+    .card {
+        @apply rounded-2xl bg-white shadow-card ring-1 ring-slate-100;
+    }
+    .input {
+        @apply w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm focus:border-brand-500 focus:ring-brand-500;
+    }
+    .label {
+        @apply mb-1.5 block text-sm font-medium text-ink-700;
+    }
+    .badge {
+        @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+    }
+}
+
+/* Hide number input spinners for quantity fields */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
