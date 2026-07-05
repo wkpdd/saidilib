@@ -1,0 +1,24 @@
+{
+  "name": "Saidi Papetrie",
+  "short_name": "Saidi",
+  "description": "Fournitures scolaires, bureautiques et informatiques — paiement à la livraison, partout en Algérie.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#e07d00",
+  "categories": ["shopping", "education"],
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/img/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Boutique", "url": "/boutique", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mon panier", "url": "/panier" },
+    { "name": "Mon compte", "url": "/compte" }
+  ]
+}

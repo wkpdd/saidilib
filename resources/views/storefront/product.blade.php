@@ -79,7 +79,7 @@
                 <p class="mt-4 text-sm leading-relaxed text-ink-700">{{ $product->short_desc }}</p>
             @endif
 
-            <form action="{{ route('cart.add') }}" method="post" class="mt-6 space-y-5">
+            <form id="buyForm" action="{{ route('cart.add') }}" method="post" class="mt-6 space-y-5">
                 @csrf
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
@@ -180,4 +180,14 @@
         </div>
     @endif
 </div>
+
+{{-- Sticky mobile add-to-cart bar (app-like, phones only) --}}
+<div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden"
+     style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); box-shadow: 0 -4px 16px rgba(0,0,0,.06);">
+    <div class="flex items-center gap-3">
+        <p class="shrink-0 text-lg font-extrabold text-ink-900">@money($product->price)</p>
+        <button type="submit" form="buyForm" class="btn-primary flex-1">🛒 {{ __('shop.add_to_cart') }}</button>
+    </div>
+</div>
+<div class="h-20 lg:hidden"></div>
 @endsection

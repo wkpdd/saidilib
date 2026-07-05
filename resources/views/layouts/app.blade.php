@@ -7,9 +7,19 @@
 <html lang="{{ $locale }}" dir="{{ $dir }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title', Setting::get('store_name', 'Saidi Papetrie'))</title>
     <meta name="description" content="@yield('meta_description', Setting::get('meta_description'))">
+
+    {{-- PWA / Android installable app --}}
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#e07d00">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Saidi">
+    <link rel="apple-touch-icon" href="/img/apple-touch.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%8F%EF%B8%8F%3C/text%3E%3C/svg%3E">
     {{-- Fonts: preconnect early, load async with display=swap so text renders immediately on slow links.
          Slimmed to the weights actually used (Cairo body 400/600/700, Poppins headings 600/700). --}}
@@ -50,5 +60,12 @@
 
     @stack('scripts')
     @include('partials.pixels-noscript', ['pixels' => $pagePixels ?? collect()])
+
+    {{-- Register the service worker (offline + connection resilience) --}}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+        }
+    </script>
 </body>
 </html>
