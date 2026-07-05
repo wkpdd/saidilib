@@ -5,6 +5,9 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+// Load external production config (/home/USERNAME/config_saidi.php) if present...
+require __DIR__.'/bootstrap/saidi-env.php';
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 

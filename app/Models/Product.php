@@ -77,6 +77,39 @@ class Product extends Model
         return 'https://placehold.co/800x800/eef2ff/2563eb?text=' . urlencode($this->name_fr);
     }
 
+    /** Raw stored path (or external URL) of the primary image, if any. */
+    public function mainImagePath(): ?string
+    {
+        return $this->main_image ?: $this->images->first()?->path;
+    }
+
+    /** Small WebP thumbnail URL for grid/card display (falls back gracefully). */
+    public function getCardImageUrlAttribute(): string
+    {
+        $path = $this->mainImagePath();
+
+        return ($path ? \App\Support\Thumbnailer::url($path, 300) : null)
+            ?? $this->main_image_url;
+    }
+
+    /** Responsive srcset ("<url> 300w, <url> 600w") for the card image. */
+    public function getCardSrcsetAttribute(): ?string
+    {
+        $path = $this->mainImagePath();
+        if (! $path || Setting::isExternal($path)) {
+            return null;
+        }
+
+        $set = [];
+        foreach (\App\Support\Thumbnailer::WIDTHS as $w) {
+            if ($url = \App\Support\Thumbnailer::url($path, $w)) {
+                $set[] = "{$url} {$w}w";
+            }
+        }
+
+        return $set ? implode(', ', $set) : null;
+    }
+
     public function getOnSaleAttribute(): bool
     {
         return $this->compare_at_price && $this->compare_at_price > $this->price;

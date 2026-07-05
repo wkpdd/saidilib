@@ -19,7 +19,7 @@ class CategoryController extends Controller
     public function create()
     {
         return view('admin.categories.form', [
-            'category'   => new Category(['is_active' => true, 'color' => '#2563eb']),
+            'category'   => new Category(['is_active' => true, 'color' => '#e07d00']),
             'categories' => Category::whereNull('parent_id')->get(),
         ]);
     }

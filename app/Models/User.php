@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'role',
+        'permissions',
         'is_active',
     ];
 
@@ -31,6 +32,28 @@ class User extends Authenticatable
         'admin'   => 'Administrateur',
         'manager' => 'Manager',
         'staff'   => 'Employé',
+    ];
+
+    /** All grantable back-office sections (RBAC permission keys). */
+    public const PERMISSIONS = [
+        'orders'     => '🧾 Commandes',
+        'clients'    => '💳 Clients & dettes',
+        'products'   => '📦 Produits',
+        'categories' => '🗂️ Catégories',
+        'purchasing' => '📥 Fournisseurs & stock',
+        'incidents'  => '🧯 Pertes & casses',
+        'social'     => '📣 Réseaux sociaux',
+        'pixels'     => '🎯 Pixels',
+        'wilayas'    => '🚚 Livraison',
+        'users'      => '👥 Équipe',
+        'settings'   => '⚙️ Paramètres',
+    ];
+
+    /** Default permission preset applied when a role is picked. */
+    public const ROLE_PRESETS = [
+        'admin'   => ['*'],
+        'manager' => ['orders', 'clients', 'products', 'categories', 'purchasing', 'incidents', 'social', 'pixels', 'wilayas'],
+        'staff'   => ['orders', 'products'],
     ];
 
     /**
@@ -55,6 +78,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_active' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 
@@ -63,9 +87,40 @@ class User extends Authenticatable
         return self::ROLES[$this->role] ?? ucfirst((string) $this->role);
     }
 
-    /** Full administrators may manage staff and settings. */
+    /** Full administrators may manage staff and settings and reset data. */
     public function isFullAdmin(): bool
     {
         return $this->is_admin && $this->role === 'admin';
+    }
+
+    /**
+     * Does this user hold a given back-office permission?
+     * Admin role → everything. Otherwise the stored `permissions` list is
+     * authoritative; if it's null (legacy user) we fall back to the role preset.
+     */
+    public function hasPermission(string $key): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        $granted = $this->permissions;
+        if ($granted === null) {
+            $granted = self::ROLE_PRESETS[$this->role] ?? [];
+        }
+
+        return in_array('*', $granted, true) || in_array($key, $granted, true);
+    }
+
+    /** The effective list of granted permission keys (for display). */
+    public function grantedPermissions(): array
+    {
+        if ($this->role === 'admin') {
+            return array_keys(self::PERMISSIONS);
+        }
+
+        $granted = $this->permissions ?? (self::ROLE_PRESETS[$this->role] ?? []);
+
+        return in_array('*', $granted, true) ? array_keys(self::PERMISSIONS) : $granted;
     }
 }

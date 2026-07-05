@@ -2,7 +2,9 @@
 <a href="{{ route('product', $product->slug) }}"
    class="group card overflow-hidden transition hover:-translate-y-1 hover:shadow-card">
     <div class="relative aspect-square overflow-hidden bg-slate-100">
-        <img src="{{ $product->main_image_url }}" alt="{{ $product->name }}" loading="lazy"
+        <img src="{{ $product->card_image_url }}"
+             @if ($product->card_srcset) srcset="{{ $product->card_srcset }}" sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" @endif
+             alt="{{ $product->name }}" width="300" height="300" loading="lazy" decoding="async"
              class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
         <div class="absolute start-2 top-2 flex flex-col gap-1">
             @if ($product->is_new)

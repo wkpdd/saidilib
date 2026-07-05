@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// Load external production config (/home/USERNAME/config_saidi.php) if present...
+require __DIR__.'/../bootstrap/saidi-env.php';
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;

@@ -19,10 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
             'fulladmin' => \App\Http\Middleware\EnsureFullAdmin::class,
+            'perm' => \App\Http\Middleware\EnsurePermission::class,
         ]);
 
         // Guests hitting admin routes go to the admin login, not a missing `login` route.
-        $middleware->redirectGuestsTo(fn () => route('admin.login'));
+        // Storefront customer routes go to the customer login; everything else
+        // (the admin) goes to the admin login.
+        $middleware->redirectGuestsTo(fn ($request) => $request->is('compte*')
+            ? route('account.login')
+            : route('admin.login'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

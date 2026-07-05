@@ -2,6 +2,22 @@
 @section('title', $product->name . ' — ' . \App\Models\Setting::get('store_name'))
 @section('meta_description', $product->short_desc)
 
+@push('head')
+    {{-- Open Graph / Twitter cards: make shared links render as rich posts --}}
+    <meta property="og:type" content="product">
+    <meta property="og:site_name" content="{{ \App\Models\Setting::get('store_name', 'Saidi Papetrie') }}">
+    <meta property="og:title" content="{{ $product->name }}">
+    <meta property="og:description" content="{{ $product->short_desc ?: \Illuminate\Support\Str::limit(strip_tags($product->description), 150) }}">
+    <meta property="og:image" content="{{ $product->main_image_url }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="product:price:amount" content="{{ (float) $product->price }}">
+    <meta property="product:price:currency" content="{{ \App\Models\Setting::get('currency', 'DA') }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $product->name }}">
+    <meta name="twitter:description" content="{{ $product->short_desc }}">
+    <meta name="twitter:image" content="{{ $product->main_image_url }}">
+@endpush
+
 @section('content')
 <div class="container-x py-8">
     <nav class="mb-5 text-sm text-slate-500">
@@ -67,24 +83,53 @@
                 @csrf
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-                {{-- Sizes / variants (selected by picture and sizes) --}}
+                {{-- Colour / size selection with live availability --}}
                 @if ($product->variants->isNotEmpty())
-                    <div>
-                        <label class="label">{{ __('shop.choose_size') }}</label>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach ($product->variants as $variant)
-                                <label class="cursor-pointer">
-                                    <input type="radio" name="variant_id" value="{{ $variant->id }}"
-                                           class="peer sr-only" data-variant
-                                           data-delta="{{ (float) $variant->price_delta }}"
-                                           data-image="{{ $variant->image?->url }}"
-                                           @checked($variant->is_default || $loop->first)>
-                                    <span class="badge border border-slate-200 px-4 py-2 text-sm font-semibold text-ink-700 peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-700">
-                                        {{ $variant->label }}
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
+                    @php
+                        $colors = $product->variants->filter(fn ($v) => $v->color)->unique('color')->values();
+                        $sizes  = $product->variants->filter(fn ($v) => $v->size)->unique('size')->values();
+                        $variantData = $product->variants->map(fn ($v) => [
+                            'id'    => $v->id,
+                            'color' => $v->color,
+                            'size'  => $v->size,
+                            'stock' => (int) $v->stock,
+                            'delta' => (float) $v->price_delta,
+                            'image' => $v->image?->url,
+                        ])->values();
+                    @endphp
+                    <div data-variants='@json($variantData)'
+                         data-base-price="{{ (float) $product->price }}"
+                         data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
+                         class="space-y-4">
+                        @if ($colors->isNotEmpty())
+                            <div>
+                                <label class="label">{{ __('shop.color') }} : <span data-color-label class="font-semibold text-ink-900"></span></label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($colors as $c)
+                                        <button type="button" data-color="{{ $c->color }}" title="{{ $c->color }}"
+                                                class="grid h-9 w-9 place-items-center rounded-full ring-2 ring-transparent transition"
+                                                style="background: {{ $c->color_hex ?: '#cbd5e1' }}"></button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($sizes->isNotEmpty())
+                            <div>
+                                <label class="label">{{ __('shop.choose_size') }}</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($sizes as $s)
+                                        <button type="button" data-size="{{ $s->size }}"
+                                                class="badge border border-slate-200 px-4 py-2 text-sm font-semibold text-ink-700 transition">
+                                            {{ $s->size }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <p data-availability class="text-sm text-slate-500"></p>
+                        <input type="hidden" name="variant_id" data-variant-input>
                     </div>
                 @endif
 
@@ -110,6 +155,8 @@
                     <div class="rounded-xl bg-slate-50 p-3">↩️<br>Retour facile</div>
                 </div>
             </form>
+
+            @include('partials.share', ['product' => $product])
         </div>
     </div>
 

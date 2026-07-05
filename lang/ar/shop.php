@@ -72,4 +72,34 @@ return [
     'order_received'  => 'تم تسجيل طلبك بنجاح. سنتصل بك للتأكيد.',
     'order_ref'       => 'رقم الطلب',
     'back_home'       => 'العودة إلى الرئيسية',
+
+    // Customer accounts
+    'account'          => 'حسابي',
+    'login'            => 'تسجيل الدخول',
+    'register'         => 'إنشاء حساب',
+    'logout'           => 'تسجيل الخروج',
+    'email'            => 'البريد الإلكتروني',
+    'password'         => 'كلمة المرور',
+    'confirm_password' => 'تأكيد كلمة المرور',
+    'remember_me'      => 'تذكرني',
+    'no_account'       => 'ليس لديك حساب؟',
+    'have_account'     => 'لديك حساب بالفعل؟',
+    'welcome_account'  => 'مرحباً! تم إنشاء حسابك بنجاح.',
+    'my_orders'        => 'طلباتي',
+    'account_balance'  => 'رصيد الحساب',
+    'you_owe'          => 'المبلغ المستحق',
+    'account_ledger'   => 'سجل الحساب',
+    'no_orders'        => 'ليس لديك أي طلب بعد.',
+    'view_order'       => 'عرض الطلب',
+    'sign_in'          => 'تسجيل الدخول',
+
+    // Sharing
+    'share_product'    => 'شارك هذا المنتج',
+    'share'            => 'مشاركة',
+    'copy_link'        => 'نسخ الرابط',
+
+    // Variants
+    'color'                 => 'اللون',
+    'choose_option'         => 'الرجاء اختيار خيار.',
+    'variant_out_of_stock'  => 'هذا الخيار غير متوفر حالياً.',
 ];

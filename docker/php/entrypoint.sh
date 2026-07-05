@@ -29,4 +29,7 @@ until php -r "new PDO('mysql:host=db;port=3306', 'root', 'root');" 2>/dev/null; 
 done
 php artisan migrate --force --seed || php artisan migrate --force || true
 
+# Pre-generate responsive WebP thumbnails for any locally-stored images
+php artisan images:thumbnails || true
+
 exec "$@"

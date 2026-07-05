@@ -72,4 +72,34 @@ return [
     'order_received'  => 'Votre commande a bien été enregistrée. Nous vous appellerons pour confirmer.',
     'order_ref'       => 'Numéro de commande',
     'back_home'       => "Retour à l'accueil",
+
+    // Customer accounts
+    'account'          => 'Mon compte',
+    'login'            => 'Connexion',
+    'register'         => 'Créer un compte',
+    'logout'           => 'Déconnexion',
+    'email'            => 'Email',
+    'password'         => 'Mot de passe',
+    'confirm_password' => 'Confirmer le mot de passe',
+    'remember_me'      => 'Se souvenir de moi',
+    'no_account'       => 'Pas encore de compte ?',
+    'have_account'     => 'Vous avez déjà un compte ?',
+    'welcome_account'  => 'Bienvenue ! Votre compte a bien été créé.',
+    'my_orders'        => 'Mes commandes',
+    'account_balance'  => 'Solde du compte',
+    'you_owe'          => 'Montant dû',
+    'account_ledger'   => 'Historique du compte',
+    'no_orders'        => "Vous n'avez pas encore de commande.",
+    'view_order'       => 'Voir la commande',
+    'sign_in'          => 'Se connecter',
+
+    // Sharing
+    'share_product'    => 'Partager ce produit',
+    'share'            => 'Partager',
+    'copy_link'        => 'Copier le lien',
+
+    // Variants
+    'color'                 => 'Couleur',
+    'choose_option'         => 'Veuillez choisir une option.',
+    'variant_out_of_stock'  => 'Cette option est en rupture de stock.',
 ];

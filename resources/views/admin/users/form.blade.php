@@ -23,7 +23,7 @@
         </div>
         <div>
             <label class="label">Rôle *</label>
-            <select name="role" class="input">
+            <select name="role" id="roleSelect" class="input">
                 @foreach (\App\Models\User::ROLES as $value => $lbl)
                     <option value="{{ $value }}" @selected(old('role', $user->role)===$value)>{{ $lbl }}</option>
                 @endforeach
@@ -41,8 +41,25 @@
         </div>
     </div>
 
-    <div class="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500">
-        <b>Rôles :</b> Administrateur = accès complet (équipe + paramètres) · Manager / Employé = commandes, produits, catégories, pixels et livraison.
+    {{-- Permissions (RBAC) --}}
+    @php
+        $granted = old('permissions', $user->exists ? $user->grantedPermissions() : (\App\Models\User::ROLE_PRESETS['staff'] ?? []));
+    @endphp
+    <div id="permBlock" class="mt-5 rounded-xl border border-slate-200 p-4">
+        <div class="mb-2 flex items-center justify-between">
+            <label class="text-sm font-semibold text-ink-700">Permissions — sections accessibles</label>
+            <span id="adminAllNote" class="hidden text-xs font-medium text-brand-700">Administrateur : accès complet à tout ✓</span>
+        </div>
+        <div id="permGrid" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            @foreach (\App\Models\User::PERMISSIONS as $key => $label)
+                <label class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                    <input type="checkbox" name="permissions[]" value="{{ $key }}"
+                           @checked(in_array($key, (array) $granted, true)) class="perm-box rounded">
+                    {{ $label }}
+                </label>
+            @endforeach
+        </div>
+        <p class="mt-2 text-xs text-slate-400">Choisir un rôle pré-remplit les permissions ; vous pouvez ensuite les ajuster une par une.</p>
     </div>
 
     <div class="mt-6 flex gap-2">
@@ -50,4 +67,33 @@
         <a href="{{ route('admin.users.index') }}" class="btn-ghost">Annuler</a>
     </div>
 </form>
+
+@push('scripts')
+<script>
+    (function () {
+        const presets = @json(\App\Models\User::ROLE_PRESETS);
+        const role = document.getElementById('roleSelect');
+        const grid = document.getElementById('permGrid');
+        const note = document.getElementById('adminAllNote');
+        const boxes = () => grid.querySelectorAll('.perm-box');
+
+        function applyRole(fillFromPreset) {
+            const isAdmin = role.value === 'admin';
+            note.classList.toggle('hidden', !isAdmin);
+            grid.classList.toggle('opacity-50', isAdmin);
+            boxes().forEach((b) => {
+                b.disabled = isAdmin;                 // admin = all, locked
+                if (isAdmin) b.checked = true;
+            });
+            if (!isAdmin && fillFromPreset) {
+                const allow = presets[role.value] || [];
+                boxes().forEach((b) => { b.checked = allow.includes(b.value); });
+            }
+        }
+
+        role.addEventListener('change', () => applyRole(true));
+        applyRole(false); // initial: honour saved/old values, just lock if admin
+    })();
+</script>
+@endpush
 @endsection

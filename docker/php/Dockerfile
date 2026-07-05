@@ -2,10 +2,10 @@ FROM php:8.3-apache
 
 # System deps for common Laravel + image extensions
 RUN apt-get update && apt-get install -y \
-    libpng-dev libjpeg-dev libfreetype6-dev \
+    libpng-dev libjpeg-dev libfreetype6-dev libwebp-dev \
     libzip-dev libonig-dev libxml2-dev \
     zip unzip git curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" pdo_mysql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 

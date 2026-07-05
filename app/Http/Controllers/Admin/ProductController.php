@@ -81,7 +81,7 @@ class ProductController extends Controller
 
     private function validateData(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name_fr'          => 'required|string|max:200',
             'name_ar'          => 'nullable|string|max:200',
             'category_id'      => 'nullable|exists:categories,id',
@@ -98,7 +98,17 @@ class ProductController extends Controller
             'is_active'        => 'nullable|boolean',
             'is_featured'      => 'nullable|boolean',
             'is_new'           => 'nullable|boolean',
+            // Uploaded gallery images: real images only, capped in size/count.
+            'images'           => 'nullable|array|max:12',
+            'images.*'         => 'image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'image_urls'       => 'nullable|string|max:5000',
         ]);
+
+        // `images` / `image_urls` are NOT product columns — they're handled by
+        // syncImages(). Strip them so they don't leak into Product::update().
+        unset($validated['images'], $validated['image_urls']);
+
+        return $validated;
     }
 
     private function uniqueSlug(string $name, ?int $ignore = null): string
@@ -133,6 +143,7 @@ class ProductController extends Controller
         // Uploaded files
         foreach ((array) $request->file('images', []) as $file) {
             $path = $file->store('products', 'public');
+            \App\Support\Thumbnailer::generateAll($path);
             $product->images()->create(['path' => $path, 'sort_order' => $product->images()->count()]);
         }
 
@@ -148,15 +159,35 @@ class ProductController extends Controller
         $variants = $request->input('variants', []);
         $keepIds = [];
 
+        // Valid image ids for this product (so a colour can only map to its own photo).
+        $imageIds = $product->images()->pluck('id')->all();
+
         foreach ($variants as $i => $v) {
+            $color = trim($v['color'] ?? '');
+            $size  = trim($v['size'] ?? '');
             $label = trim($v['label_fr'] ?? '');
+
+            // Derive a display label from colour + size when none was provided.
             if ($label === '') {
+                $label = trim(implode(' · ', array_filter([$color, $size])));
+            }
+            // Skip completely empty rows.
+            if ($label === '' && $color === '' && $size === '') {
                 continue;
             }
+
+            $imageId = ! empty($v['image_id']) && in_array((int) $v['image_id'], $imageIds, true)
+                ? (int) $v['image_id']
+                : null;
+
             $attrs = [
-                'label_fr'    => $label,
+                'label_fr'    => $label ?: ($color ?: $size),
                 'label_ar'    => $v['label_ar'] ?? null,
-                'option_group'=> $v['option_group'] ?? 'size',
+                'color'       => $color ?: null,
+                'color_hex'   => $color !== '' ? ($v['color_hex'] ?? null) : null,
+                'size'        => $size ?: null,
+                'image_id'    => $imageId,
+                'option_group'=> $color !== '' ? 'color' : 'size',
                 'price_delta' => (float) ($v['price_delta'] ?? 0),
                 'stock'       => (int) ($v['stock'] ?? 0),
                 'is_default'  => isset($v['is_default']) && $v['is_default'],

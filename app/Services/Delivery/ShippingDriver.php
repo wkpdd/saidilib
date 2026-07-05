@@ -20,6 +20,12 @@ interface ShippingDriver
     /** Push an order to the carrier and return a normalized result. */
     public function createShipment(Order $order): ShipmentResult;
 
+    /** Validate a created shipment so it becomes visible to logistics. */
+    public function validateShipment(Order $order): ShipmentResult;
+
+    /** Fetch the official shipping label PDF (raw bytes) for a tracking, or null. */
+    public function labelPdf(string $tracking): ?string;
+
     /** Optional: query tracking status. */
     public function track(string $tracking): ShipmentResult;
 }

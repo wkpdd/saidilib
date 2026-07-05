@@ -7,6 +7,7 @@
     <form method="get" class="flex-1">
         <input name="q" value="{{ request('q') }}" placeholder="Rechercher un produit…" class="input max-w-sm">
     </form>
+    <a href="{{ route('admin.products.import.form') }}" class="btn-ghost">📥 Importer Excel</a>
     <a href="{{ route('admin.products.create') }}" class="btn-primary">+ Nouveau produit</a>
 </div>
 

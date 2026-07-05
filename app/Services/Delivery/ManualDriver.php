@@ -34,6 +34,16 @@ class ManualDriver implements ShippingDriver
         );
     }
 
+    public function validateShipment(Order $order): ShipmentResult
+    {
+        return ShipmentResult::ok($order->tracking_number, [], 'Livraison manuelle — pas de validation externe.');
+    }
+
+    public function labelPdf(string $tracking): ?string
+    {
+        return null;
+    }
+
     public function track(string $tracking): ShipmentResult
     {
         return ShipmentResult::ok($tracking, ['mode' => 'manual']);

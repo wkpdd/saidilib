@@ -32,7 +32,19 @@ class CartController extends Controller
             ? ProductVariant::where('product_id', $product->id)->find($data['variant_id'])
             : null;
 
-        $this->cart->add($product, $variant, (int) ($data['qty'] ?? 1));
+        $qty = (int) ($data['qty'] ?? 1);
+
+        // If the product has variants, one must be chosen and in stock.
+        if ($product->variants()->exists()) {
+            if (! $variant) {
+                return back()->with('error', __('shop.choose_option'));
+            }
+            if ((int) $variant->stock < $qty) {
+                return back()->with('error', __('shop.variant_out_of_stock'));
+            }
+        }
+
+        $this->cart->add($product, $variant, $qty);
 
         if ($request->expectsJson()) {
             return response()->json(['count' => $this->cart->count(), 'message' => __('shop.added_to_cart')]);

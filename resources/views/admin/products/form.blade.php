@@ -77,18 +77,29 @@
         {{-- Sizes / variants --}}
         <div class="card p-5">
             <div class="mb-1 flex items-center justify-between">
-                <h2 class="font-semibold">Tailles / Options</h2>
+                <h2 class="font-semibold">Couleurs / Tailles / Stock</h2>
                 <button type="button" onclick="addVariant()" class="text-sm font-semibold text-brand-700">+ Ajouter</button>
             </div>
-            <p class="mb-4 text-xs text-slate-400">Ex : formats, couleurs. Le supplément de prix s'ajoute au prix de base.</p>
+            <p class="mb-3 text-xs text-slate-400">Une ligne = une combinaison <b>couleur + taille</b> avec son propre stock. La colonne <b>Photo</b> lie la couleur à une image : sur la fiche produit, choisir la couleur affiche cette photo. Stock 0 = épuisé.</p>
+            @php $imgOpts = $product->exists ? $product->images->values() : collect(); @endphp
+            <div class="mb-1 hidden grid-cols-12 gap-2 px-1 text-[11px] font-semibold uppercase text-slate-400 sm:grid">
+                <span class="col-span-3">Couleur</span><span class="col-span-1">●</span><span class="col-span-2">Taille</span><span class="col-span-1">+Prix</span><span class="col-span-2">Stock</span><span class="col-span-2">Photo</span><span class="col-span-1"></span>
+            </div>
             <div id="variants" class="space-y-2">
                 @foreach (old('variants', $product->variants->toArray() ?: []) as $i => $v)
                     <div class="grid grid-cols-12 items-center gap-2" data-variant-row>
                         <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $v['id'] ?? '' }}">
-                        <input name="variants[{{ $i }}][label_fr]" value="{{ $v['label_fr'] ?? '' }}" placeholder="Libellé" class="input col-span-4">
-                        <input name="variants[{{ $i }}][label_ar]" value="{{ $v['label_ar'] ?? '' }}" placeholder="بالعربية" dir="rtl" class="input col-span-3">
-                        <input name="variants[{{ $i }}][price_delta]" value="{{ $v['price_delta'] ?? 0 }}" type="number" step="any" placeholder="+ Prix" class="input col-span-2">
-                        <input name="variants[{{ $i }}][stock]" value="{{ $v['stock'] ?? 0 }}" type="number" placeholder="Stock" class="input col-span-2">
+                        <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge" class="input col-span-3">
+                        <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color" class="h-10 w-full col-span-1 rounded-lg border border-slate-200">
+                        <input name="variants[{{ $i }}][size]" value="{{ $v['size'] ?? '' }}" placeholder="L / 24x32" class="input col-span-2">
+                        <input name="variants[{{ $i }}][price_delta]" value="{{ $v['price_delta'] ?? 0 }}" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
+                        <input name="variants[{{ $i }}][stock]" value="{{ $v['stock'] ?? 0 }}" type="number" min="0" placeholder="Stock" class="input col-span-2">
+                        <select name="variants[{{ $i }}][image_id]" class="input col-span-2 text-xs">
+                            <option value="">— Photo —</option>
+                            @foreach ($imgOpts as $k => $im)
+                                <option value="{{ $im->id }}" @selected(($v['image_id'] ?? null) == $im->id)>Photo {{ $k + 1 }}</option>
+                            @endforeach
+                        </select>
                         <button type="button" onclick="this.closest('[data-variant-row]').remove()" class="col-span-1 text-red-500">✕</button>
                     </div>
                 @endforeach
@@ -140,6 +151,14 @@
         </div>
         @endif
 
+        @if ($product->exists)
+            <div class="card p-5">
+                <h2 class="mb-1 font-semibold">📣 Publier sur les réseaux</h2>
+                <p class="mb-1 text-xs text-slate-400">Partagez la fiche produit publique en un clic (aperçu riche avec image &amp; prix).</p>
+                @include('partials.share', ['product' => $product, 'url' => route('product', $product->slug)])
+            </div>
+        @endif
+
         <div class="card p-5">
             <button class="btn-primary w-full">💾 Enregistrer</button>
             <a href="{{ route('admin.products.index') }}" class="btn-ghost mt-2 w-full">Annuler</a>
@@ -150,15 +169,22 @@
 @push('scripts')
 <script>
     let vIndex = {{ count(old('variants', $product->variants->toArray() ?: [])) }};
+    const imgOptions = @json($imgOpts->map(fn ($im, $k) => ['id' => $im->id, 'label' => 'Photo ' . ($k + 1)])->values());
+    function imgOptionsHtml() {
+        return '<option value="">— Photo —</option>' +
+            imgOptions.map((o) => `<option value="${o.id}">${o.label}</option>`).join('');
+    }
     function addVariant() {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-12 items-center gap-2';
         row.setAttribute('data-variant-row', '');
         row.innerHTML = `
-            <input name="variants[${vIndex}][label_fr]" placeholder="Libellé" class="input col-span-4">
-            <input name="variants[${vIndex}][label_ar]" placeholder="بالعربية" dir="rtl" class="input col-span-3">
-            <input name="variants[${vIndex}][price_delta]" type="number" step="any" placeholder="+ Prix" class="input col-span-2">
-            <input name="variants[${vIndex}][stock]" type="number" placeholder="Stock" class="input col-span-2">
+            <input name="variants[${vIndex}][color]" placeholder="Rouge" class="input col-span-3">
+            <input name="variants[${vIndex}][color_hex]" type="color" value="#000000" class="h-10 w-full col-span-1 rounded-lg border border-slate-200">
+            <input name="variants[${vIndex}][size]" placeholder="L / 24x32" class="input col-span-2">
+            <input name="variants[${vIndex}][price_delta]" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
+            <input name="variants[${vIndex}][stock]" type="number" min="0" placeholder="Stock" class="input col-span-2">
+            <select name="variants[${vIndex}][image_id]" class="input col-span-2 text-xs">${imgOptionsHtml()}</select>
             <button type="button" class="col-span-1 text-red-500">✕</button>`;
         row.querySelector('button').addEventListener('click', () => row.remove());
         document.getElementById('variants').appendChild(row);

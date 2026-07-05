@@ -18,7 +18,14 @@
         </div>
         <div>
             <label class="label">Icône (emoji)</label>
-            <input name="icon" value="{{ old('icon', $category->icon) }}" class="input" placeholder="✏️">
+            <input id="iconInput" name="icon" value="{{ old('icon', $category->icon) }}" class="input text-center text-lg" placeholder="✏️" autocomplete="off">
+            <div class="mt-2 flex flex-wrap gap-1">
+                @foreach (['✏️','📚','🎒','🖊️','📐','🎨','🖍️','📎','📁','🗂️','💻','🖨️','🧸','🎲','🧩','⚽','📔','📒','✂️','📏','🖌️','🧮','🖇️','📇'] as $emo)
+                    <button type="button" onclick="document.getElementById('iconInput').value='{{ $emo }}'"
+                            class="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-lg hover:bg-brand-100">{{ $emo }}</button>
+                @endforeach
+            </div>
+            <p class="mt-1 text-xs text-slate-400">Cliquez un emoji ou tapez le vôtre.</p>
         </div>
         <div>
             <label class="label">Couleur</label>

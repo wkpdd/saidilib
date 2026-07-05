@@ -30,11 +30,22 @@ class ProductVariant extends Model
 
     public function getLabelAttribute(): string
     {
-        return $this->tr('label') ?? '';
+        $tr = $this->tr('label');
+        if ($tr) {
+            return $tr;
+        }
+
+        return trim(implode(' · ', array_filter([$this->color, $this->size]))) ?: '';
     }
 
     public function getPriceAttribute(): float
     {
         return (float) $this->product->price + (float) $this->price_delta;
+    }
+
+    /** A variant is available when it has stock. */
+    public function getInStockAttribute(): bool
+    {
+        return (int) $this->stock > 0;
     }
 }

@@ -67,4 +67,31 @@ class DeliveryManager
 
         return $result;
     }
+
+    /** Validate an already-dispatched order with its carrier. */
+    public function validate(Order $order): ShipmentResult
+    {
+        $driver = $this->driver((string) $order->delivery_provider);
+        if (! $driver) {
+            return ShipmentResult::fail('Aucun fournisseur associé à cette commande.');
+        }
+
+        $result = $driver->validateShipment($order);
+
+        if ($result->success) {
+            $order->update([
+                'provider_payload' => array_merge($order->provider_payload ?? [], ['validated' => true]),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /** Official carrier label PDF bytes for an order, or null. */
+    public function labelPdf(Order $order): ?string
+    {
+        $driver = $this->driver((string) $order->delivery_provider);
+
+        return ($driver && $order->tracking_number) ? $driver->labelPdf($order->tracking_number) : null;
+    }
 }

@@ -11,22 +11,28 @@
 <div class="flex min-h-screen">
     {{-- Sidebar --}}
     <aside id="adminNav" class="fixed inset-y-0 z-40 hidden w-64 flex-col bg-ink-900 text-slate-300 lg:flex">
-        <div class="flex items-center gap-2 px-5 py-5 text-white">
-            <span class="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-lg">✏️</span>
-            <span class="font-display font-bold">{{ Setting::get('store_name', 'Saidi') }}</span>
+        <div class="px-4 py-4">
+            <a href="{{ route('admin.dashboard') }}" class="block rounded-xl bg-white p-2">
+                <img src="{{ asset('logov2.jpeg') }}" alt="{{ Setting::get('store_name', 'Saidi') }}" class="mx-auto h-12 w-auto">
+            </a>
         </div>
         <nav class="flex-1 space-y-1 px-3 py-2 text-sm">
             @php
-                $fullAdmin = auth()->user()->isFullAdmin();
+                $u = auth()->user();
                 $nav = [
                     ['admin.dashboard', '📊 Tableau de bord', 'dashboard', true],
-                    ['admin.orders.index', '🧾 Commandes', 'orders', true],
-                    ['admin.products.index', '📦 Produits', 'products', true],
-                    ['admin.categories.index', '🗂️ Catégories', 'categories', true],
-                    ['admin.pixels.index', '🎯 Pixels', 'pixels', true],
-                    ['admin.wilayas.index', '🚚 Livraison', 'wilayas', true],
-                    ['admin.users.index', '👥 Équipe', 'users', $fullAdmin],
-                    ['admin.settings.edit', '⚙️ Paramètres', 'settings', $fullAdmin],
+                    ['admin.orders.index', '🧾 Commandes', 'orders', $u->hasPermission('orders')],
+                    ['admin.clients.index', '💳 Clients', 'clients', $u->hasPermission('clients')],
+                    ['admin.products.index', '📦 Produits', 'products', $u->hasPermission('products')],
+                    ['admin.categories.index', '🗂️ Catégories', 'categories', $u->hasPermission('categories')],
+                    ['admin.suppliers.index', '📥 Fournisseurs', 'suppliers', $u->hasPermission('purchasing')],
+                    ['admin.receipts.index', '📦 Réceptions stock', 'receipts', $u->hasPermission('purchasing')],
+                    ['admin.social.index', '📣 Réseaux sociaux', 'social', $u->hasPermission('social')],
+                    ['admin.incidents.index', '🧯 Pertes & casses', 'incidents', $u->hasPermission('incidents')],
+                    ['admin.pixels.index', '🎯 Pixels', 'pixels', $u->hasPermission('pixels')],
+                    ['admin.wilayas.index', '🚚 Livraison', 'wilayas', $u->hasPermission('wilayas')],
+                    ['admin.users.index', '👥 Équipe', 'users', $u->hasPermission('users')],
+                    ['admin.settings.edit', '⚙️ Paramètres', 'settings', $u->hasPermission('settings')],
                 ];
             @endphp
             @foreach ($nav as [$route, $label, $key, $show])
@@ -51,7 +57,15 @@
         <header class="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:px-8">
             <button data-toggle="#adminNav" class="lg:hidden">☰</button>
             <h1 class="font-display text-lg font-bold">@yield('heading', '')</h1>
-            <div class="ms-auto flex items-center gap-2 text-sm">
+            <div class="ms-auto flex items-center gap-3 text-sm">
+                {{-- Notifications bell --}}
+                @php $unread = \App\Models\AdminNotification::unread()->count(); @endphp
+                <a href="{{ route('admin.notifications.index') }}" class="relative grid h-9 w-9 place-items-center rounded-xl hover:bg-slate-100" title="Notifications">
+                    <svg class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    @if ($unread)
+                        <span class="absolute -top-0.5 -end-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">{{ $unread > 9 ? '9+' : $unread }}</span>
+                    @endif
+                </a>
                 <span class="text-slate-500">{{ auth()->user()->name }}</span>
                 <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-brand-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
             </div>

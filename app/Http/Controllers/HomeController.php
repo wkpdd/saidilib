@@ -13,16 +13,25 @@ class HomeController extends Controller
             ->withCount('products')->orderBy('sort_order')->get();
 
         $featured = Product::active()->where('is_featured', true)
-            ->with('category')->latest()->take(8)->get();
+            ->with('category', 'images')->latest()->take(8)->get();
 
         $newArrivals = Product::active()->where('is_new', true)
-            ->with('category')->latest()->take(8)->get();
+            ->with('category', 'images')->latest()->take(8)->get();
 
         $onSale = Product::active()->whereNotNull('compare_at_price')
             ->whereColumn('compare_at_price', '>', 'price')
-            ->with('category')->take(8)->get();
+            ->with('category', 'images')->take(8)->get();
 
-        return view('storefront.home', compact('categories', 'featured', 'newArrivals', 'onSale'));
+        // Special "Games for Kids" showcase.
+        $kidsCategory = Category::where('slug', 'jeux-pour-enfants')->first();
+        $kidsProducts = $kidsCategory
+            ? Product::active()->where('category_id', $kidsCategory->id)
+                ->with('category', 'images')->latest()->take(8)->get()
+            : collect();
+
+        return view('storefront.home', compact(
+            'categories', 'featured', 'newArrivals', 'onSale', 'kidsCategory', 'kidsProducts'
+        ));
     }
 
     public function about()

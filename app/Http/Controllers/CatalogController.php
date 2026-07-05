@@ -11,7 +11,7 @@ class CatalogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::active()->with('category');
+        $query = Product::active()->with('category', 'images');
 
         if ($search = $request->query('q')) {
             $query->where(function ($q) use ($search) {
@@ -50,12 +50,42 @@ class CatalogController extends Controller
         return view('storefront.catalog', compact('products', 'categories'));
     }
 
+    /**
+     * Windows-Explorer-style category browse: breadcrumb path, subcategory
+     * "folders" on top, then this category's product "files" below.
+     */
     public function category(string $slug, Request $request)
     {
-        $category = Category::active()->where('slug', $slug)->firstOrFail();
-        $request->merge(['category' => $slug]);
+        $category = Category::active()->where('slug', $slug)
+            ->with(['children' => fn ($q) => $q->where('is_active', true)
+                ->withCount(['products' => fn ($p) => $p->where('is_active', true)])
+                ->orderBy('sort_order')])
+            ->firstOrFail();
 
-        return $this->index($request)->with('activeCategory', $category);
+        // Breadcrumb: walk parent chain up to the root.
+        $ancestors = collect();
+        $node = $category->parent;
+        while ($node) {
+            $ancestors->prepend($node);
+            $node = $node->parent;
+        }
+
+        // Product "files" directly inside this category.
+        $sort = $request->query('sort');
+        $query = $category->products()->active()->with('images');
+        match ($sort) {
+            'price_asc'  => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            'newest'     => $query->latest(),
+            default      => $query->orderByDesc('is_featured')->latest(),
+        };
+        $products = $query->paginate(12)->withQueryString();
+
+        // Total including subcategories (shown in the header).
+        $descendantIds = $category->children->pluck('id')->push($category->id);
+        $totalCount = Product::active()->whereIn('category_id', $descendantIds)->count();
+
+        return view('storefront.category', compact('category', 'ancestors', 'products', 'totalCount'));
     }
 
     public function show(string $slug, PixelService $pixels)

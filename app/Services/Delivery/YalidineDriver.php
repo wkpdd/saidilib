@@ -99,6 +99,17 @@ class YalidineDriver implements ShippingDriver
         }
     }
 
+    public function validateShipment(Order $order): ShipmentResult
+    {
+        // Yalidine parcels are created already validated; nothing extra to do.
+        return ShipmentResult::ok($order->tracking_number, [], 'Aucune validation séparée requise pour Yalidine.');
+    }
+
+    public function labelPdf(string $tracking): ?string
+    {
+        return null; // Yalidine labels are retrieved from its own dashboard.
+    }
+
     public function track(string $tracking): ShipmentResult
     {
         return ShipmentResult::ok($tracking, ['mode' => $this->apiReady() ? 'api' : 'manual']);

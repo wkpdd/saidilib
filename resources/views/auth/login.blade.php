@@ -8,10 +8,11 @@
 </head>
 <body class="grid min-h-screen place-items-center bg-gradient-to-br from-brand-700 to-brand-900 p-4">
     <div class="w-full max-w-sm">
-        <div class="mb-6 text-center text-white">
-            <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-2xl">✏️</span>
-            <h1 class="mt-3 font-display text-xl font-bold">{{ \App\Models\Setting::get('store_name', 'Saidi Papetrie') }}</h1>
-            <p class="text-sm text-brand-100">Espace administrateur</p>
+        <div class="mb-6 text-center">
+            <div class="mx-auto w-fit rounded-2xl bg-white p-3 shadow-soft">
+                <img src="{{ asset('logov2.jpeg') }}" alt="{{ \App\Models\Setting::get('store_name', 'Saidi Papetrie') }}" class="h-20 w-auto">
+            </div>
+            <p class="mt-3 text-sm text-brand-100">Espace administrateur</p>
         </div>
         <form action="{{ route('admin.login.post') }}" method="post" class="card p-6">
             @csrf

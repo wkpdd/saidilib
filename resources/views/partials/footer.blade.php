@@ -2,9 +2,8 @@
 <footer class="mt-16 bg-ink-900 text-slate-300">
     <div class="container-x grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-            <div class="flex items-center gap-2">
-                <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 text-white text-xl">✏️</span>
-                <span class="font-display text-lg font-bold text-white">{{ Setting::get('store_name', 'Saidi Papetrie') }}</span>
+            <div class="w-fit rounded-xl bg-white p-2">
+                <img src="{{ asset('logov2.jpeg') }}" alt="{{ Setting::get('store_name', 'Saidi Papetrie') }}" class="h-14 w-auto">
             </div>
             <p class="mt-3 text-sm leading-relaxed text-slate-400">
                 {{ $locale === 'ar' ? Setting::get('tagline_ar') : Setting::get('tagline_fr') }}

@@ -20,10 +20,8 @@
         <div class="flex items-center gap-4 py-3">
             {{-- Logo --}}
             <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
-                <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 text-white text-xl shadow-soft">✏️</span>
-                <span class="font-display text-lg font-bold leading-tight">
-                    {{ Setting::get('store_name', 'Saidi Papetrie') }}
-                </span>
+                <img src="{{ asset('logov2.jpeg') }}" alt="{{ Setting::get('store_name', 'Saidi Papetrie') }}"
+                     class="h-12 w-auto sm:h-14" width="240" height="138">
             </a>
 
             {{-- Search --}}
@@ -43,6 +41,19 @@
                     <a href="{{ route('locale.switch', 'fr') }}" class="rounded-lg px-2.5 py-1 {{ $locale==='fr' ? 'bg-white shadow-soft text-brand-700' : 'text-slate-500' }}">FR</a>
                     <a href="{{ route('locale.switch', 'ar') }}" class="rounded-lg px-2.5 py-1 {{ $locale==='ar' ? 'bg-white shadow-soft text-brand-700' : 'text-slate-500' }}">ع</a>
                 </div>
+
+                {{-- Account --}}
+                @auth('client')
+                    <a href="{{ route('account.index') }}" title="{{ __('shop.account') }}"
+                       class="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-700 hover:bg-brand-100">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </a>
+                @else
+                    <a href="{{ route('account.login') }}" title="{{ __('shop.login') }}"
+                       class="grid h-10 w-10 place-items-center rounded-xl hover:bg-slate-100">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </a>
+                @endauth
 
                 {{-- Cart --}}
                 <a href="{{ route('cart.index') }}" class="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-slate-100">

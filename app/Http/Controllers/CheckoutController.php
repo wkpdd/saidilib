@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Wilaya;
 use App\Services\CartService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
@@ -63,6 +65,7 @@ class CheckoutController extends Controller
         $order = DB::transaction(function () use ($data, $wilaya, $deliveryFee, $subtotal, $request) {
             $order = Order::create([
                 'reference'     => Order::generateReference(),
+                'client_id'     => Auth::guard('client')->id(),
                 'customer_name' => $data['customer_name'],
                 'phone'         => $data['phone'],
                 'phone2'        => $data['phone2'] ?? null,
@@ -107,6 +110,20 @@ class CheckoutController extends Controller
         });
 
         $this->cart->clear();
+
+        // Notify the admin of the new order (in-app bell).
+        AdminNotification::raise(
+            'order',
+            "Nouvelle commande {$order->reference}",
+            "{$order->customer_name} · " . number_format((float) $order->total, 2, ',', ' ') . ' DA',
+            route('admin.orders.show', $order),
+            '🧾'
+        );
+
+        // Fan out Telegram alerts AFTER the response is sent so checkout stays fast.
+        dispatch(function () use ($order) {
+            app(\App\Services\TelegramNotifier::class)->orderCreated($order);
+        })->afterResponse();
 
         return redirect()->route('checkout.success', $order->reference);
     }
