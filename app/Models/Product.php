@@ -115,6 +115,36 @@ class Product extends Model
         return $this->compare_at_price && $this->compare_at_price > $this->price;
     }
 
+    /**
+     * Effective base unit price for a given client's pricing tier, with a
+     * graceful fallback chain (super → wholesale → retail).
+     */
+    public function priceForTier(?string $tier): float
+    {
+        if ($tier === 'super_wholesale') {
+            return (float) ($this->super_wholesale_price ?: $this->wholesale_price ?: $this->price);
+        }
+        if ($tier === 'wholesale') {
+            return (float) ($this->wholesale_price ?: $this->price);
+        }
+
+        return (float) $this->price;
+    }
+
+    /** Price shown to whoever is browsing now (the logged-in client's tier). */
+    public function getCurrentPriceAttribute(): float
+    {
+        $client = auth('client')->user();
+
+        return $this->priceForTier($client?->type);
+    }
+
+    /** True when the current viewer is getting a tier discount below retail. */
+    public function getHasTierPriceAttribute(): bool
+    {
+        return $this->current_price < (float) $this->price;
+    }
+
     public function getDiscountPercentAttribute(): int
     {
         if (! $this->on_sale) {

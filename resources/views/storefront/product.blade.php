@@ -66,10 +66,13 @@
                 @endif
             </div>
 
-            <div class="mt-4 flex items-end gap-3">
-                <span data-price data-price="{{ (float) $product->price }}" data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
-                      class="text-3xl font-extrabold text-ink-900">@money($product->price)</span>
-                @if ($product->on_sale)
+            <div class="mt-4 flex flex-wrap items-end gap-3">
+                <span data-price data-price="{{ (float) $product->current_price }}" data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
+                      class="text-3xl font-extrabold text-ink-900">@money($product->current_price)</span>
+                @if ($product->has_tier_price)
+                    <span class="text-lg text-slate-400 line-through">@money($product->price)</span>
+                    <span class="badge bg-brand-700 text-white">💼 {{ auth('client')->user()->type_label }}</span>
+                @elseif ($product->on_sale)
                     <span class="text-lg text-slate-400 line-through">@money($product->compare_at_price)</span>
                     <span class="badge bg-accent text-white">-{{ $product->discount_percent }}%</span>
                 @endif
@@ -98,7 +101,7 @@
                         ])->values();
                     @endphp
                     <div data-variants='@json($variantData)'
-                         data-base-price="{{ (float) $product->price }}"
+                         data-base-price="{{ (float) $product->current_price }}"
                          data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
                          class="space-y-4">
                         @if ($colors->isNotEmpty())

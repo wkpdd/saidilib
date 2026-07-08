@@ -98,6 +98,11 @@ return [
     'share'            => 'Partager',
     'copy_link'        => 'Copier le lien',
 
+    // Quick add / wholesale
+    'add'             => 'Ajouter',
+    'choose_options'  => 'Choisir les options',
+    'wholesale'       => 'Grossiste',
+
     // Variants
     'color'                 => 'Couleur',
     'choose_option'         => 'Veuillez choisir une option.',

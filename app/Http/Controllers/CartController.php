@@ -44,7 +44,12 @@ class CartController extends Controller
             }
         }
 
-        $this->cart->add($product, $variant, $qty);
+        // Apply the logged-in client's pricing tier (retail / wholesale / super).
+        $client = \Illuminate\Support\Facades\Auth::guard('client')->user();
+        $unitPrice = $product->priceForTier($client?->type)
+            + ($variant ? (float) $variant->price_delta : 0);
+
+        $this->cart->add($product, $variant, $qty, $unitPrice);
 
         if ($request->expectsJson()) {
             return response()->json(['count' => $this->cart->count(), 'message' => __('shop.added_to_cart')]);

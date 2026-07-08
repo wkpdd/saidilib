@@ -19,7 +19,7 @@ class CartService
         return Session::get(self::KEY, []);
     }
 
-    public function add(Product $product, ?ProductVariant $variant, int $qty = 1): void
+    public function add(Product $product, ?ProductVariant $variant, int $qty = 1, ?float $unitPrice = null): void
     {
         $qty = max(1, $qty);
         $key = $this->lineKey($product->id, $variant?->id);
@@ -28,7 +28,8 @@ class CartService
         if (isset($cart[$key])) {
             $cart[$key]['qty'] += $qty;
         } else {
-            $unit = $variant ? (float) $variant->price : (float) $product->price;
+            // Effective price (e.g. wholesale tier) when provided; else retail.
+            $unit = $unitPrice ?? ($variant ? (float) $variant->price : (float) $product->price);
             $cart[$key] = [
                 'product_id'  => $product->id,
                 'variant_id'  => $variant?->id,

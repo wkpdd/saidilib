@@ -50,6 +50,17 @@ class Order extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(OrderAdjustment::class)->latest();
+    }
+
+    /** Line prices can be edited only before the order is shipped/finalised. */
+    public function getIsEditableAttribute(): bool
+    {
+        return in_array($this->status, ['pending', 'confirmed', 'preparing'], true);
+    }
+
     public function getIsRefundedAttribute(): bool
     {
         return ! is_null($this->refunded_at);

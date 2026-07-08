@@ -5,37 +5,77 @@
 @section('content')
 <div class="grid gap-6 lg:grid-cols-3">
     <div class="space-y-6 lg:col-span-2">
-        {{-- Items --}}
+        {{-- Items (prices editable before the deal is confirmed) --}}
         <div class="card overflow-hidden">
-            <h2 class="border-b border-slate-100 p-5 font-semibold">Articles</h2>
-            <table class="w-full text-sm">
-                <tbody class="divide-y divide-slate-100">
-                    @foreach ($order->items as $it)
-                        <tr>
-                            <td class="px-5 py-3">
-                                <div class="flex items-center gap-3">
-                                    @if ($it->image)<img src="{{ $it->image }}" class="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-100">@endif
-                                    <div>
-                                        <p class="font-medium">{{ $it->name }}</p>
-                                        @if ($it->variant_label)<p class="text-xs text-slate-400">{{ $it->variant_label }}</p>@endif
+            <div class="flex items-center justify-between border-b border-slate-100 p-5">
+                <h2 class="font-semibold">Articles</h2>
+                @if ($order->is_editable)
+                    <span class="text-xs font-medium text-brand-700">✏️ Prix modifiables avant confirmation</span>
+                @endif
+            </div>
+            <form action="{{ route('admin.orders.prices', $order) }}" method="post">
+                @csrf
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-[11px] uppercase text-slate-400">
+                        <tr><th class="px-5 py-2 text-start">Article</th><th class="px-3 py-2 text-center">Qté</th><th class="px-3 py-2 text-end">Prix unit.</th><th class="px-5 py-2 text-end">Total</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach ($order->items as $it)
+                            <tr>
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        @if ($it->image)<img src="{{ $it->image }}" class="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-100">@endif
+                                        <div>
+                                            <p class="font-medium">{{ $it->name }}</p>
+                                            @if ($it->variant_label)<p class="text-xs text-slate-400">{{ $it->variant_label }}</p>@endif
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-5 py-3 text-center text-slate-500">{{ $it->quantity }} × @money($it->unit_price)</td>
-                            <td class="px-5 py-3 text-end font-semibold">@money($it->line_total)</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-                <tfoot class="border-t border-slate-100 text-sm">
-                    <tr><td colspan="2" class="px-5 py-2 text-end text-slate-500">Sous-total</td><td class="px-5 py-2 text-end">@money($order->subtotal)</td></tr>
-                    <tr><td colspan="2" class="px-5 py-2 text-end text-slate-500">Livraison</td><td class="px-5 py-2 text-end">@money($order->delivery_fee)</td></tr>
-                    <tr class="text-base font-bold"><td colspan="2" class="px-5 py-3 text-end">Total</td><td class="px-5 py-3 text-end text-brand-700">@money($order->total)</td></tr>
-                    @if ($order->is_refunded)
-                        <tr class="text-sm text-green-700"><td colspan="2" class="px-5 py-2 text-end">Remboursé ({{ \App\Models\Order::REFUND_METHODS[$order->refund_method] ?? $order->refund_method }})</td><td class="px-5 py-2 text-end">−@money($order->refund_amount)</td></tr>
-                    @endif
-                </tfoot>
-            </table>
+                                </td>
+                                <td class="px-3 py-3 text-center text-slate-500">{{ $it->quantity }}</td>
+                                <td class="px-3 py-3 text-end">
+                                    @if ($order->is_editable)
+                                        <input name="items[{{ $it->id }}][unit_price]" type="number" step="any" min="0"
+                                               value="{{ (float) $it->unit_price }}" class="input w-24 py-1 text-end text-sm">
+                                    @else
+                                        @money($it->unit_price)
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3 text-end font-semibold">@money($it->line_total)</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="border-t border-slate-100 text-sm">
+                        <tr><td colspan="3" class="px-5 py-2 text-end text-slate-500">Sous-total</td><td class="px-5 py-2 text-end">@money($order->subtotal)</td></tr>
+                        <tr><td colspan="3" class="px-5 py-2 text-end text-slate-500">Livraison</td><td class="px-5 py-2 text-end">@money($order->delivery_fee)</td></tr>
+                        <tr class="text-base font-bold"><td colspan="3" class="px-5 py-3 text-end">Total</td><td class="px-5 py-3 text-end text-brand-700">@money($order->total)</td></tr>
+                        @if ($order->is_refunded)
+                            <tr class="text-sm text-green-700"><td colspan="3" class="px-5 py-2 text-end">Remboursé ({{ \App\Models\Order::REFUND_METHODS[$order->refund_method] ?? $order->refund_method }})</td><td class="px-5 py-2 text-end">−@money($order->refund_amount)</td></tr>
+                        @endif
+                    </tfoot>
+                </table>
+                @if ($order->is_editable)
+                    <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 p-4">
+                        <input name="reason" maxlength="190" placeholder="Motif (optionnel) — ex : remise négociée" class="input flex-1 text-sm">
+                        <button class="btn-primary">💾 Enregistrer les prix</button>
+                    </div>
+                @endif
+            </form>
         </div>
+
+        {{-- Price change audit log --}}
+        @if ($order->adjustments->isNotEmpty())
+            <div class="card p-5">
+                <h2 class="mb-3 font-semibold">📝 Historique des modifications de prix</h2>
+                <div class="space-y-2 text-sm">
+                    @foreach ($order->adjustments as $adj)
+                        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                            <span>{{ $adj->label }} : <span class="text-slate-400 line-through">@money($adj->old_price)</span> → <b class="text-ink-900">@money($adj->new_price)</b></span>
+                            <span class="text-xs text-slate-400">{{ optional($adj->author)->name ?: '—' }} · {{ $adj->created_at->format('d/m/Y H:i') }}@if($adj->reason) · « {{ $adj->reason }} »@endif</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         {{-- Customer --}}
         <div class="card p-5">

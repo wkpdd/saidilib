@@ -111,10 +111,21 @@
     <div class="space-y-6">
         <div class="card p-5">
             <h2 class="mb-4 font-semibold">Prix & stock</h2>
-            <label class="label">Prix (DA) *</label>
+            <label class="label">Prix détail (DA) *</label>
             <input name="price" type="number" step="any" value="{{ old('price', $product->price) }}" required class="input mb-3">
             <label class="label">Ancien prix (barré)</label>
             <input name="compare_at_price" type="number" step="any" value="{{ old('compare_at_price', $product->compare_at_price) }}" class="input mb-3">
+            <div class="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-brand-50 p-3">
+                <div>
+                    <label class="label text-xs">💼 Prix grossiste</label>
+                    <input name="wholesale_price" type="number" step="any" value="{{ old('wholesale_price', $product->wholesale_price) }}" class="input" placeholder="—">
+                </div>
+                <div>
+                    <label class="label text-xs">🏭 Super grossiste</label>
+                    <input name="super_wholesale_price" type="number" step="any" value="{{ old('super_wholesale_price', $product->super_wholesale_price) }}" class="input" placeholder="—">
+                </div>
+                <p class="col-span-2 text-[11px] text-slate-400">Appliqués automatiquement aux clients connectés selon leur catégorie. Vides = prix détail.</p>
+            </div>
             <label class="label">Stock</label>
             <input name="stock" type="number" value="{{ old('stock', $product->stock ?? 0) }}" class="input mb-3">
             <label class="flex items-center gap-2 text-sm"><input type="hidden" name="track_stock" value="0"><input type="checkbox" name="track_stock" value="1" @checked(old('track_stock', $product->track_stock)) class="rounded"> Gérer le stock</label>

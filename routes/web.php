@@ -123,6 +123,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('orders/{order}/slip', [Admin\OrderController::class, 'slip'])->name('orders.slip');
         Route::get('orders/{order}/noest-label', [Admin\OrderController::class, 'noestLabel'])->name('orders.noest.label');
         Route::patch('orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.status');
+        Route::post('orders/{order}/prices', [Admin\OrderController::class, 'editPrices'])->name('orders.prices');
         Route::post('orders/{order}/dispatch', [Admin\OrderController::class, 'dispatch'])->name('orders.dispatch');
         Route::post('orders/{order}/validate', [Admin\OrderController::class, 'validateShipment'])->name('orders.validate');
         Route::post('orders/{order}/refund', [Admin\OrderController::class, 'refund'])->name('orders.refund');
