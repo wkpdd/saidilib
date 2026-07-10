@@ -43,6 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const variants = JSON.parse(vRoot.dataset.variants || '[]');
         const basePrice = parseFloat(vRoot.dataset.basePrice || '0');
         const currency = vRoot.dataset.currency || '';
+        // Only gate availability on per-variant stock when the merchant actually
+        // tracks stock for this product. Otherwise every option stays selectable
+        // (a variant row left at stock=0 by the admin must not brick the picker).
+        const trackStock = vRoot.dataset.trackStock === '1';
+        const hasStock = (v) => !trackStock || v.stock > 0;
         const input = vRoot.querySelector('[data-variant-input]');
         const avail = vRoot.querySelector('[data-availability]');
         const colorLabel = vRoot.querySelector('[data-color-label]');
@@ -51,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasColors = variants.some((v) => v.color);
         const hasSizes = variants.some((v) => v.size);
         let selColor = null;
+        let selColorName = null;
         let selSize = null;
 
         const thumbs = document.querySelectorAll('[data-thumb]');
@@ -69,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Colours: available if some in-stock variant matches (given the chosen size).
             vRoot.querySelectorAll('[data-color]').forEach((b) => {
                 const c = b.dataset.color;
-                const ok = variants.some((v) => v.color === c && (!selSize || v.size === selSize) && v.stock > 0);
+                const ok = variants.some((v) => v.color === c && (!selSize || v.size === selSize) && hasStock(v));
                 b.disabled = !ok;
                 b.classList.toggle('opacity-30', !ok);
                 b.classList.toggle('ring-brand-600', c === selColor);
@@ -79,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Sizes: available if some in-stock variant matches (given the chosen colour).
             vRoot.querySelectorAll('[data-size]').forEach((b) => {
                 const s = b.dataset.size;
-                const ok = variants.some((v) => v.size === s && (!selColor || v.color === selColor) && v.stock > 0);
+                const ok = variants.some((v) => v.size === s && (!selColor || v.color === selColor) && hasStock(v));
                 b.disabled = !ok;
                 b.classList.toggle('opacity-40', !ok);
                 b.classList.toggle('line-through', !ok);
@@ -87,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 b.classList.toggle('bg-brand-50', s === selSize);
                 b.classList.toggle('text-brand-700', s === selSize);
             });
-            if (colorLabel) colorLabel.textContent = selColor || '';
+            if (colorLabel) colorLabel.textContent = selColorName || '';
 
             // Swap the main photo as soon as a colour with a linked image is chosen.
             if (selColor) swapMain(colorImage(selColor));
@@ -99,8 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.value = v.id;
                 if (priceEl) priceEl.textContent = new Intl.NumberFormat('fr-FR').format(basePrice + (v.delta || 0)) + ' ' + currency;
                 if (v.image) swapMain(v.image);
-                avail.textContent = v.stock > 0 ? ('✓ En stock (' + v.stock + ')') : '✗ Épuisé';
-                avail.className = 'text-sm font-semibold ' + (v.stock > 0 ? 'text-green-600' : 'text-red-600');
+                if (!trackStock) {
+                    avail.textContent = '✓ Disponible';
+                    avail.className = 'text-sm font-semibold text-green-600';
+                } else {
+                    avail.textContent = v.stock > 0 ? ('✓ En stock (' + v.stock + ')') : '✗ Épuisé';
+                    avail.className = 'text-sm font-semibold ' + (v.stock > 0 ? 'text-green-600' : 'text-red-600');
+                }
             } else {
                 input.value = '';
                 avail.textContent = (hasColors && hasSizes) ? 'Choisissez une couleur et une taille' : 'Choisissez une option';
@@ -109,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         vRoot.querySelectorAll('[data-color]').forEach((b) =>
-            b.addEventListener('click', () => { if (!b.disabled) { selColor = b.dataset.color; render(); } }));
+            b.addEventListener('click', () => { if (!b.disabled) { selColor = b.dataset.color; selColorName = b.dataset.colorName; render(); } }));
         vRoot.querySelectorAll('[data-size]').forEach((b) =>
             b.addEventListener('click', () => { if (!b.disabled) { selSize = b.dataset.size; render(); } }));
         render();

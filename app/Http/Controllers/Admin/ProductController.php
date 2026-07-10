@@ -168,13 +168,23 @@ class ProductController extends Controller
             $color = trim($v['color'] ?? '');
             $size  = trim($v['size'] ?? '');
             $label = trim($v['label_fr'] ?? '');
+            $colorHex = trim($v['color_hex'] ?? '');
+            $stock = trim((string) ($v['stock'] ?? ''));
+            $priceDelta = trim((string) ($v['price_delta'] ?? ''));
+
+            // The colour NAME is optional: picking a swatch is enough. The form
+            // sets a hidden "has_color" flag via JS the moment the admin touches
+            // the colour picker (or it's pre-set to 1 when editing a variant that
+            // already has a colour), so we don't rely on the name being filled.
+            $isColorRow = $color !== '' || ! empty($v['has_color']);
 
             // Derive a display label from colour + size when none was provided.
             if ($label === '') {
                 $label = trim(implode(' · ', array_filter([$color, $size])));
             }
-            // Skip completely empty rows.
-            if ($label === '' && $color === '' && $size === '') {
+            // Skip genuinely empty rows (no name/colour/size and nothing else set).
+            if ($label === '' && $color === '' && $size === '' && ! $isColorRow
+                && $stock === '' && ($priceDelta === '' || (float) $priceDelta === 0.0)) {
                 continue;
             }
 
@@ -182,14 +192,16 @@ class ProductController extends Controller
                 ? (int) $v['image_id']
                 : null;
 
+            $displayColor = $color ?: ($isColorRow ? $this->colorNameFromHex($colorHex) : null);
+
             $attrs = [
-                'label_fr'    => $label ?: ($color ?: $size),
+                'label_fr'    => $label ?: ($displayColor ?: $size),
                 'label_ar'    => $v['label_ar'] ?? null,
-                'color'       => $color ?: null,
-                'color_hex'   => $color !== '' ? ($v['color_hex'] ?? null) : null,
+                'color'       => $displayColor,
+                'color_hex'   => $isColorRow ? ($colorHex ?: null) : null,
                 'size'        => $size ?: null,
                 'image_id'    => $imageId,
-                'option_group'=> $color !== '' ? 'color' : 'size',
+                'option_group'=> $isColorRow ? 'color' : 'size',
                 'price_delta' => (float) ($v['price_delta'] ?? 0),
                 'stock'       => (int) ($v['stock'] ?? 0),
                 'is_default'  => isset($v['is_default']) && $v['is_default'],
@@ -206,5 +218,45 @@ class ProductController extends Controller
         }
 
         $product->variants()->whereNotIn('id', $keepIds)->delete();
+    }
+
+    /**
+     * Friendly French name for a swatch when the admin picked a colour but
+     * left the name field blank. Falls back to the hex code when no close
+     * match is found, so the customer never sees a blank label.
+     */
+    private function colorNameFromHex(string $hex): ?string
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) !== 6 || ! ctype_xdigit($hex)) {
+            return null;
+        }
+
+        $palette = [
+            // This app's own palette first, so its buttons/brand shades match exactly.
+            'Rouge' => 'dc2626', 'Bleu' => '2563eb', 'Orange' => 'e07d00',
+            'Noir' => '000000', 'Blanc' => 'ffffff', 'Gris' => '808080',
+            'Bordeaux' => '800000', 'Rose' => 'ffc0cb',
+            'Marron' => 'a52a2a', 'Beige' => 'f5f5dc',
+            'Jaune' => 'ffff00', 'Doré' => 'ffd700',
+            'Vert' => '008000', 'Vert clair' => '90ee90',
+            'Bleu clair' => 'add8e6', 'Bleu marine' => '000080',
+            'Violet' => '800080', 'Turquoise' => '40e0d0', 'Argenté' => 'c0c0c0',
+        ];
+
+        [$r, $g, $b] = sscanf($hex, '%02x%02x%02x');
+        $best = null;
+        $bestDist = null;
+        foreach ($palette as $name => $swatch) {
+            [$pr, $pg, $pb] = sscanf($swatch, '%02x%02x%02x');
+            $dist = ($r - $pr) ** 2 + ($g - $pg) ** 2 + ($b - $pb) ** 2;
+            if ($bestDist === null || $dist < $bestDist) {
+                $bestDist = $dist;
+                $best = $name;
+            }
+        }
+
+        // A close-enough match reads as a real colour name; otherwise show the hex.
+        return $bestDist !== null && $bestDist < 9000 ? $best : ('#' . strtoupper($hex));
     }
 }

@@ -34,12 +34,14 @@ class CartController extends Controller
 
         $qty = (int) ($data['qty'] ?? 1);
 
-        // If the product has variants, one must be chosen and in stock.
+        // If the product has variants, one must be chosen. Stock is only
+        // enforced per-variant when the merchant actually tracks stock —
+        // otherwise a variant left at stock=0 by the admin would block sales.
         if ($product->variants()->exists()) {
             if (! $variant) {
                 return back()->with('error', __('shop.choose_option'));
             }
-            if ((int) $variant->stock < $qty) {
+            if ($product->track_stock && (int) $variant->stock < $qty) {
                 return back()->with('error', __('shop.variant_out_of_stock'));
             }
         }
