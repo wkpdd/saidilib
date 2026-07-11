@@ -20,8 +20,9 @@ class Client extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
 
     public const TYPES = [
-        'retail'    => 'Particulier',
-        'wholesale' => 'Grossiste / Revendeur',
+        'retail'          => 'Particulier',
+        'wholesale'       => 'Grossiste',
+        'super_wholesale' => 'Super Grossiste',
     ];
 
     protected function casts(): array

@@ -34,17 +34,24 @@ class CartController extends Controller
 
         $qty = (int) ($data['qty'] ?? 1);
 
-        // If the product has variants, one must be chosen and in stock.
+        // If the product has variants, one must be chosen. Stock is only
+        // enforced per-variant when the merchant actually tracks stock —
+        // otherwise a variant left at stock=0 by the admin would block sales.
         if ($product->variants()->exists()) {
             if (! $variant) {
                 return back()->with('error', __('shop.choose_option'));
             }
-            if ((int) $variant->stock < $qty) {
+            if ($product->track_stock && (int) $variant->stock < $qty) {
                 return back()->with('error', __('shop.variant_out_of_stock'));
             }
         }
 
-        $this->cart->add($product, $variant, $qty);
+        // Apply the logged-in client's pricing tier (retail / wholesale / super).
+        $client = \Illuminate\Support\Facades\Auth::guard('client')->user();
+        $unitPrice = $product->priceForTier($client?->type)
+            + ($variant ? (float) $variant->price_delta : 0);
+
+        $this->cart->add($product, $variant, $qty, $unitPrice);
 
         if ($request->expectsJson()) {
             return response()->json(['count' => $this->cart->count(), 'message' => __('shop.added_to_cart')]);

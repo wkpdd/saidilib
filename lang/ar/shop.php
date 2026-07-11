@@ -98,6 +98,11 @@ return [
     'share'            => 'مشاركة',
     'copy_link'        => 'نسخ الرابط',
 
+    // Quick add / wholesale
+    'add'             => 'أضف',
+    'choose_options'  => 'اختر الخيارات',
+    'wholesale'       => 'جملة',
+
     // Variants
     'color'                 => 'اللون',
     'choose_option'         => 'الرجاء اختيار خيار.',

@@ -66,10 +66,13 @@
                 @endif
             </div>
 
-            <div class="mt-4 flex items-end gap-3">
-                <span data-price data-price="{{ (float) $product->price }}" data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
-                      class="text-3xl font-extrabold text-ink-900">@money($product->price)</span>
-                @if ($product->on_sale)
+            <div class="mt-4 flex flex-wrap items-end gap-3">
+                <span data-price data-price="{{ (float) $product->current_price }}" data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
+                      class="text-3xl font-extrabold text-ink-900">@money($product->current_price)</span>
+                @if ($product->has_tier_price)
+                    <span class="text-lg text-slate-400 line-through">@money($product->price)</span>
+                    <span class="badge bg-brand-700 text-white">💼 {{ auth('client')->user()->type_label }}</span>
+                @elseif ($product->on_sale)
                     <span class="text-lg text-slate-400 line-through">@money($product->compare_at_price)</span>
                     <span class="badge bg-accent text-white">-{{ $product->discount_percent }}%</span>
                 @endif
@@ -86,11 +89,13 @@
                 {{-- Colour / size selection with live availability --}}
                 @if ($product->variants->isNotEmpty())
                     @php
-                        $colors = $product->variants->filter(fn ($v) => $v->color)->unique('color')->values();
+                        // Colour NAME is optional — the hex code is the stable identity
+                        // (never blank for a colour row), so match/dedupe on that.
+                        $colors = $product->variants->filter(fn ($v) => $v->color_hex)->unique('color_hex')->values();
                         $sizes  = $product->variants->filter(fn ($v) => $v->size)->unique('size')->values();
                         $variantData = $product->variants->map(fn ($v) => [
                             'id'    => $v->id,
-                            'color' => $v->color,
+                            'color' => $v->color_hex,
                             'size'  => $v->size,
                             'stock' => (int) $v->stock,
                             'delta' => (float) $v->price_delta,
@@ -98,17 +103,19 @@
                         ])->values();
                     @endphp
                     <div data-variants='@json($variantData)'
-                         data-base-price="{{ (float) $product->price }}"
+                         data-base-price="{{ (float) $product->current_price }}"
                          data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
+                         data-track-stock="{{ $product->track_stock ? 1 : 0 }}"
                          class="space-y-4">
                         @if ($colors->isNotEmpty())
                             <div>
                                 <label class="label">{{ __('shop.color') }} : <span data-color-label class="font-semibold text-ink-900"></span></label>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach ($colors as $c)
-                                        <button type="button" data-color="{{ $c->color }}" title="{{ $c->color }}"
+                                        <button type="button" data-color="{{ $c->color_hex }}" data-color-name="{{ $c->color ?: $c->color_hex }}"
+                                                title="{{ $c->color ?: $c->color_hex }}"
                                                 class="grid h-9 w-9 place-items-center rounded-full ring-2 ring-transparent transition"
-                                                style="background: {{ $c->color_hex ?: '#cbd5e1' }}"></button>
+                                                style="background: {{ $c->color_hex }}"></button>
                                     @endforeach
                                 </div>
                             </div>

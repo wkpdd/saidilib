@@ -80,20 +80,21 @@
                 <h2 class="font-semibold">Couleurs / Tailles / Stock</h2>
                 <button type="button" onclick="addVariant()" class="text-sm font-semibold text-brand-700">+ Ajouter</button>
             </div>
-            <p class="mb-3 text-xs text-slate-400">Une ligne = une combinaison <b>couleur + taille</b> avec son propre stock. La colonne <b>Photo</b> lie la couleur à une image : sur la fiche produit, choisir la couleur affiche cette photo. Stock 0 = épuisé.</p>
+            <p class="mb-3 text-xs text-slate-400">Une ligne = une combinaison <b>couleur + taille</b> avec son propre stock. Le <b>nom de la couleur est facultatif</b> — choisir la pastille suffit. La colonne <b>Photo</b> lie la couleur à une image. Laissez <b>Stock</b> vide si vous ne suivez pas le stock par variante (aucune option ne sera bloquée).</p>
             @php $imgOpts = $product->exists ? $product->images->values() : collect(); @endphp
             <div class="mb-1 hidden grid-cols-12 gap-2 px-1 text-[11px] font-semibold uppercase text-slate-400 sm:grid">
-                <span class="col-span-3">Couleur</span><span class="col-span-1">●</span><span class="col-span-2">Taille</span><span class="col-span-1">+Prix</span><span class="col-span-2">Stock</span><span class="col-span-2">Photo</span><span class="col-span-1"></span>
+                <span class="col-span-3">Couleur (optionnel)</span><span class="col-span-1">●</span><span class="col-span-2">Taille</span><span class="col-span-1">+Prix</span><span class="col-span-2">Stock</span><span class="col-span-2">Photo</span><span class="col-span-1"></span>
             </div>
             <div id="variants" class="space-y-2">
                 @foreach (old('variants', $product->variants->toArray() ?: []) as $i => $v)
                     <div class="grid grid-cols-12 items-center gap-2" data-variant-row>
                         <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $v['id'] ?? '' }}">
-                        <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge" class="input col-span-3">
-                        <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color" class="h-10 w-full col-span-1 rounded-lg border border-slate-200">
+                        <input type="hidden" name="variants[{{ $i }}][has_color]" value="{{ (!empty($v['color']) || !empty($v['color_hex'])) ? 1 : 0 }}" data-has-color>
+                        <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge (optionnel)" class="input col-span-3">
+                        <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
                         <input name="variants[{{ $i }}][size]" value="{{ $v['size'] ?? '' }}" placeholder="L / 24x32" class="input col-span-2">
                         <input name="variants[{{ $i }}][price_delta]" value="{{ $v['price_delta'] ?? 0 }}" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
-                        <input name="variants[{{ $i }}][stock]" value="{{ $v['stock'] ?? 0 }}" type="number" min="0" placeholder="Stock" class="input col-span-2">
+                        <input name="variants[{{ $i }}][stock]" value="{{ $v['stock'] ?? '' }}" type="number" min="0" placeholder="Stock (vide = illimité)" class="input col-span-2">
                         <select name="variants[{{ $i }}][image_id]" class="input col-span-2 text-xs">
                             <option value="">— Photo —</option>
                             @foreach ($imgOpts as $k => $im)
@@ -111,10 +112,21 @@
     <div class="space-y-6">
         <div class="card p-5">
             <h2 class="mb-4 font-semibold">Prix & stock</h2>
-            <label class="label">Prix (DA) *</label>
+            <label class="label">Prix détail (DA) *</label>
             <input name="price" type="number" step="any" value="{{ old('price', $product->price) }}" required class="input mb-3">
             <label class="label">Ancien prix (barré)</label>
             <input name="compare_at_price" type="number" step="any" value="{{ old('compare_at_price', $product->compare_at_price) }}" class="input mb-3">
+            <div class="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-brand-50 p-3">
+                <div>
+                    <label class="label text-xs">💼 Prix grossiste</label>
+                    <input name="wholesale_price" type="number" step="any" value="{{ old('wholesale_price', $product->wholesale_price) }}" class="input" placeholder="—">
+                </div>
+                <div>
+                    <label class="label text-xs">🏭 Super grossiste</label>
+                    <input name="super_wholesale_price" type="number" step="any" value="{{ old('super_wholesale_price', $product->super_wholesale_price) }}" class="input" placeholder="—">
+                </div>
+                <p class="col-span-2 text-[11px] text-slate-400">Appliqués automatiquement aux clients connectés selon leur catégorie. Vides = prix détail.</p>
+            </div>
             <label class="label">Stock</label>
             <input name="stock" type="number" value="{{ old('stock', $product->stock ?? 0) }}" class="input mb-3">
             <label class="flex items-center gap-2 text-sm"><input type="hidden" name="track_stock" value="0"><input type="checkbox" name="track_stock" value="1" @checked(old('track_stock', $product->track_stock)) class="rounded"> Gérer le stock</label>
@@ -179,17 +191,27 @@
         row.className = 'grid grid-cols-12 items-center gap-2';
         row.setAttribute('data-variant-row', '');
         row.innerHTML = `
-            <input name="variants[${vIndex}][color]" placeholder="Rouge" class="input col-span-3">
-            <input name="variants[${vIndex}][color_hex]" type="color" value="#000000" class="h-10 w-full col-span-1 rounded-lg border border-slate-200">
+            <input type="hidden" name="variants[${vIndex}][has_color]" value="0" data-has-color>
+            <input name="variants[${vIndex}][color]" placeholder="Rouge (optionnel)" class="input col-span-3">
+            <input name="variants[${vIndex}][color_hex]" type="color" value="#000000" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
             <input name="variants[${vIndex}][size]" placeholder="L / 24x32" class="input col-span-2">
             <input name="variants[${vIndex}][price_delta]" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
-            <input name="variants[${vIndex}][stock]" type="number" min="0" placeholder="Stock" class="input col-span-2">
+            <input name="variants[${vIndex}][stock]" type="number" min="0" placeholder="Stock (vide = illimité)" class="input col-span-2">
             <select name="variants[${vIndex}][image_id]" class="input col-span-2 text-xs">${imgOptionsHtml()}</select>
             <button type="button" class="col-span-1 text-red-500">✕</button>`;
         row.querySelector('button').addEventListener('click', () => row.remove());
         document.getElementById('variants').appendChild(row);
         vIndex++;
     }
+
+    // Picking a colour swatch (even without typing a name) marks the row as a
+    // "colour" variant, so the storefront picker shows it as a swatch.
+    document.getElementById('variants').addEventListener('input', (e) => {
+        if (e.target.matches('[data-color-hex]')) {
+            const flag = e.target.closest('[data-variant-row]').querySelector('[data-has-color]');
+            if (flag) flag.value = '1';
+        }
+    });
 </script>
 @endpush
 @endsection

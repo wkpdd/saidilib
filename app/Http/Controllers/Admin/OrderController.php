@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
 use App\Models\Order;
+use App\Models\OrderAdjustment;
 use App\Services\Delivery\DeliveryManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -36,10 +38,72 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items', 'wilaya', 'client');
+        $order->load('items', 'wilaya', 'client', 'adjustments.author');
         $providers = $this->delivery->all();
 
         return view('admin.orders.show', compact('order', 'providers'));
+    }
+
+    /**
+     * Edit line-item prices before the deal is confirmed/shipped, recompute the
+     * totals, and log every change to order_adjustments.
+     */
+    public function editPrices(Request $request, Order $order)
+    {
+        abort_unless($order->is_editable, 403, 'Cette commande ne peut plus être modifiée (déjà expédiée).');
+
+        $data = $request->validate([
+            'items'              => 'required|array',
+            'items.*.unit_price' => 'nullable|numeric|min:0|max:99999999',
+            'reason'             => 'nullable|string|max:190',
+        ]);
+
+        $order->load('items');
+        $changed = 0;
+
+        DB::transaction(function () use ($order, $data, $request, &$changed) {
+            foreach ($order->items as $item) {
+                $raw = $data['items'][$item->id]['unit_price'] ?? null;
+                if ($raw === null || $raw === '') {
+                    continue;
+                }
+                $new = (float) $raw;
+                $old = (float) $item->unit_price;
+                if (abs($new - $old) < 0.001) {
+                    continue;
+                }
+
+                $oldTotal = (float) $item->line_total;
+                $newTotal = $new * $item->quantity;
+                $item->update(['unit_price' => $new, 'line_total' => $newTotal]);
+
+                OrderAdjustment::create([
+                    'order_id'      => $order->id,
+                    'order_item_id' => $item->id,
+                    'label'         => $item->name,
+                    'old_price'     => $old,
+                    'new_price'     => $new,
+                    'old_total'     => $oldTotal,
+                    'new_total'     => $newTotal,
+                    'reason'        => $data['reason'] ?? null,
+                    'created_by'    => Auth::id(),
+                ]);
+                $changed++;
+            }
+
+            if ($changed) {
+                $subtotal = (float) $order->items()->sum('line_total');
+                $order->update([
+                    'subtotal' => $subtotal,
+                    'total'    => $subtotal + (float) $order->delivery_fee - (float) $order->discount,
+                ]);
+            }
+        });
+
+        return back()->with(
+            $changed ? 'success' : 'error',
+            $changed ? "Prix mis à jour ({$changed} ligne(s)). Total recalculé." : 'Aucun changement de prix.'
+        );
     }
 
     /** Printable Noest delivery slip (bordereau). */
