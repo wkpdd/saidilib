@@ -27,7 +27,10 @@
                 </div>
                 <div>
                     <label class="label">Référence (SKU)</label>
-                    <input name="sku" value="{{ old('sku', $product->sku) }}" class="input">
+                    <div class="flex gap-2">
+                        <input name="sku" id="skuInput" value="{{ old('sku', $product->sku) }}" class="input">
+                        <button type="button" id="scanSkuBtn" class="btn-ghost shrink-0 px-3" title="Scanner un code-barres">📷</button>
+                    </div>
                 </div>
                 <div class="sm:col-span-2">
                     <label class="label">Description courte (FR)</label>
@@ -212,6 +215,16 @@
             if (flag) flag.value = '1';
         }
     });
+
+    // Scan a barcode/QR to fill the SKU field instantly.
+    document.getElementById('scanSkuBtn')?.addEventListener('click', () => {
+        window.SaidiScanner?.open((code) => {
+            document.getElementById('skuInput').value = code;
+        });
+    });
 </script>
+@endpush
+@push('scripts')
+    @vite(['resources/js/scanner.js'])
 @endpush
 @endsection

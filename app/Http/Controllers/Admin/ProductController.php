@@ -77,6 +77,24 @@ class ProductController extends Controller
         return redirect()->route('admin.products.index')->with('success', 'Produit supprimé.');
     }
 
+    /**
+     * JSON lookup by exact SKU — used by the barcode/QR scanner (product form,
+     * stock-receipt form) to find a product instantly after a scan.
+     */
+    public function lookup(Request $request)
+    {
+        $sku = trim((string) $request->query('sku'));
+        if ($sku === '') {
+            return response()->json(['found' => false], 422);
+        }
+
+        $product = Product::where('sku', $sku)->first(['id', 'name_fr', 'sku']);
+
+        return $product
+            ? response()->json(['found' => true, 'id' => $product->id, 'name' => $product->name_fr, 'sku' => $product->sku])
+            : response()->json(['found' => false]);
+    }
+
     // ---------------------------------------------------------------
 
     private function validateData(Request $request): array

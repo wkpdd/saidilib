@@ -77,6 +77,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('products/import', [Admin\ProductImportController::class, 'form'])->name('products.import.form');
         Route::get('products/import/template', [Admin\ProductImportController::class, 'template'])->name('products.import.template');
         Route::post('products/import', [Admin\ProductImportController::class, 'import'])->name('products.import');
+        Route::get('products/lookup', [Admin\ProductController::class, 'lookup'])->name('products.lookup');
         Route::resource('products', Admin\ProductController::class);
     });
     Route::middleware('perm:categories')->group(function () {

@@ -22,12 +22,15 @@
             <div id="items" class="space-y-2">
                 @foreach (old('items', $receipt->exists ? $receipt->items->toArray() : []) as $i => $it)
                     <div class="grid grid-cols-12 items-center gap-2" data-item-row>
-                        <select name="items[{{ $i }}][product_id]" class="input col-span-4 text-sm">
-                            <option value="">— Produit —</option>
-                            @foreach ($products as $p)
-                                <option value="{{ $p->id }}" @selected(($it['product_id'] ?? null) == $p->id)>{{ $p->name_fr }}</option>
-                            @endforeach
-                        </select>
+                        <div class="col-span-4 flex gap-1">
+                            <select name="items[{{ $i }}][product_id]" class="input flex-1 text-sm" data-product-select>
+                                <option value="">— Produit —</option>
+                                @foreach ($products as $p)
+                                    <option value="{{ $p->id }}" @selected(($it['product_id'] ?? null) == $p->id)>{{ $p->name_fr }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="btn-ghost shrink-0 px-2" title="Scanner un code-barres" data-scan-item>📷</button>
+                        </div>
                         <input name="items[{{ $i }}][lot_number]" value="{{ $it['lot_number'] ?? '' }}" placeholder="Lot" class="input col-span-2">
                         <input name="items[{{ $i }}][expiry_date]" value="{{ isset($it['expiry_date']) ? \Illuminate\Support\Str::of($it['expiry_date'])->substr(0,10) : '' }}" type="date" class="input col-span-2 text-xs">
                         <input name="items[{{ $i }}][quantity]" value="{{ $it['quantity'] ?? 1 }}" type="number" min="0" placeholder="Qté" class="input col-span-1">
@@ -83,17 +86,46 @@
         row.className = 'grid grid-cols-12 items-center gap-2';
         row.setAttribute('data-item-row', '');
         row.innerHTML = `
-            <select name="items[${iIndex}][product_id]" class="input col-span-4 text-sm">${productOptions()}</select>
+            <div class="col-span-4 flex gap-1">
+                <select name="items[${iIndex}][product_id]" class="input flex-1 text-sm" data-product-select>${productOptions()}</select>
+                <button type="button" class="btn-ghost shrink-0 px-2" title="Scanner un code-barres" data-scan-item>📷</button>
+            </div>
             <input name="items[${iIndex}][lot_number]" placeholder="Lot" class="input col-span-2">
             <input name="items[${iIndex}][expiry_date]" type="date" class="input col-span-2 text-xs">
             <input name="items[${iIndex}][quantity]" type="number" min="0" value="1" placeholder="Qté" class="input col-span-1">
             <input name="items[${iIndex}][unit_cost]" type="number" step="any" min="0" value="0" placeholder="Coût" class="input col-span-2">
-            <button type="button" class="col-span-1 text-red-500">✕</button>`;
-        row.querySelector('button').addEventListener('click', () => row.remove());
+            <button type="button" class="col-span-1 text-red-500" data-remove-item>✕</button>`;
+        row.querySelector('[data-remove-item]').addEventListener('click', () => row.remove());
         document.getElementById('items').appendChild(row);
         iIndex++;
     }
     if (iIndex === 0) addItem();
+
+    // Scan a barcode/QR on any row, look it up by SKU, and select it in that
+    // row's product dropdown. Delegated so it also covers rows added later.
+    document.getElementById('items').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-scan-item]');
+        if (!btn) return;
+        window.SaidiScanner?.open(async (code) => {
+            try {
+                const res = await fetch(`{{ route('admin.products.lookup') }}?sku=${encodeURIComponent(code)}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await res.json();
+                const select = btn.closest('[data-item-row]').querySelector('[data-product-select]');
+                if (data.found) {
+                    select.value = data.id;
+                } else {
+                    alert(`Aucun produit avec le code « ${code} ». Créez-le d'abord dans Produits.`);
+                }
+            } catch (e) {
+                alert('Erreur de connexion pendant la recherche du produit.');
+            }
+        });
+    });
 </script>
+@endpush
+@push('scripts')
+    @vite(['resources/js/scanner.js'])
 @endpush
 @endsection
