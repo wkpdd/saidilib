@@ -92,6 +92,34 @@
         <p class="mt-2 text-xs text-slate-400">La publication utilise l'API Graph (Facebook/Instagram) et le bot Telegram configuré ci-dessus.</p>
     </div>
 
+    {{-- Google Image Search (product photo sourcing) --}}
+    <div class="card p-6 lg:col-span-2">
+        <h2 class="mb-1 font-semibold">🔍 Recherche d'images (Google)</h2>
+        <p class="mb-4 text-xs text-slate-400">
+            Cherchez et importez des photos produit directement dans la fiche produit. Utilise l'API officielle
+            <b>Google Custom Search</b> (gratuite jusqu'à 100 recherches/jour) — pas de scraping.
+            Créez une clé sur <a href="https://console.cloud.google.com/apis/library/customsearch.googleapis.com" target="_blank" class="text-brand-700 underline">Google Cloud Console</a>
+            et un moteur de recherche (recherche d'images activée) sur
+            <a href="https://programmablesearchengine.google.com" target="_blank" class="text-brand-700 underline">Programmable Search Engine</a>.
+        </p>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="label">Clé API (API key)</label>
+                <input name="google_cse_key" value="{{ $v('google_cse_key') }}" class="input" placeholder="AIza...">
+            </div>
+            <div>
+                <label class="label">ID du moteur de recherche (cx)</label>
+                <input name="google_cse_cx" value="{{ $v('google_cse_cx') }}" class="input" placeholder="a1b2c3d4e5f6g7h8i">
+            </div>
+        </div>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+            <input type="hidden" name="google_cse_reuse_only" value="0">
+            <input type="checkbox" name="google_cse_reuse_only" value="1" @checked($v('google_cse_reuse_only', '1')==='1') class="rounded">
+            N'afficher que les images libres de droits (recommandé)
+        </label>
+        <p class="mt-2 text-xs text-amber-600">⚠️ Vous restez responsable des droits d'utilisation des images importées, même avec ce filtre.</p>
+    </div>
+
     {{-- Noest delivery --}}
     <div class="card p-6">
         <h2 class="mb-1 font-semibold">🚚 Livraison Noest (API)</h2>

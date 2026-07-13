@@ -31,6 +31,7 @@ class SettingController extends Controller
             'telegram' => ['telegram_bot_token', 'telegram_chat_ids', 'telegram_channel_id'],
             'noest'    => ['noest_token', 'noest_guid', 'noest_enabled', 'noest_station_code'],
             'socialapi'=> ['fb_page_id', 'fb_page_token', 'ig_user_id', 'ig_token', 'fb_graph_version'],
+            'imgsearch'=> ['google_cse_key', 'google_cse_cx', 'google_cse_reuse_only'],
         ];
 
         foreach ($fields as $group => $keys) {
