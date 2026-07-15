@@ -70,6 +70,18 @@
 
             <label class="label">Téléverser des images</label>
             <input type="file" name="images[]" multiple accept="image/*" class="input">
+
+            {{-- Paste from clipboard: Ctrl+V anywhere on the page, or the button.
+                 Pasted images live in their own hidden images[] input so they
+                 merge with (never overwrite) files picked above. --}}
+            <div class="mt-3 rounded-xl border border-dashed border-slate-300 p-3 text-center">
+                <input type="file" name="images[]" multiple accept="image/*" id="pastedImages" class="hidden">
+                <button type="button" id="pasteImageBtn" class="btn-ghost">📋 Coller une image du presse-papiers</button>
+                <p class="mt-1 text-xs text-slate-400">Astuce : <b>Ctrl+V</b> (ou Cmd+V) fonctionne directement sur cette page.</p>
+                <p id="pasteError" class="mt-1 hidden text-xs text-red-600"></p>
+                <div id="pastePreviews" class="mt-2 hidden flex-wrap justify-center gap-2"></div>
+            </div>
+
             <label class="label mt-3">…ou coller des URLs (une par ligne)</label>
             <textarea name="image_urls" rows="2" class="input" placeholder="https://…"></textarea>
 
@@ -291,6 +303,88 @@
         const chip = e.target.closest('[data-recent-chip]');
         if (!chip) return;
         addVariant({ name: chip.dataset.name, hex: chip.dataset.hex });
+    });
+
+    // ── Paste image from clipboard ───────────────────────────────────────
+    // Pasted images are collected in a DataTransfer and mirrored into the
+    // hidden #pastedImages input, so they submit alongside (not instead of)
+    // files chosen in the regular picker, through the same optimised pipeline.
+    const pasteInput = document.getElementById('pastedImages');
+    const pastePreviews = document.getElementById('pastePreviews');
+    const pasteError = document.getElementById('pasteError');
+    const pastedFiles = new DataTransfer();
+    let pasteCounter = 0;
+
+    function showPasteError(msg) {
+        if (!pasteError) return;
+        pasteError.textContent = msg;
+        pasteError.classList.remove('hidden');
+        setTimeout(() => pasteError.classList.add('hidden'), 5000);
+    }
+
+    function addPastedImage(blob) {
+        if (!blob || !blob.type.startsWith('image/')) return false;
+        const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        const file = new File([blob], `collee-${++pasteCounter}.${ext}`, { type: blob.type });
+        pastedFiles.items.add(file);
+        pasteInput.files = pastedFiles.files;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'relative h-20 w-20 overflow-hidden rounded-xl ring-1 ring-slate-200';
+        const img = document.createElement('img');
+        img.className = 'h-full w-full object-cover';
+        img.src = URL.createObjectURL(file);
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = '✕';
+        del.title = 'Retirer';
+        del.className = 'absolute right-0 top-0 rounded-bl-lg bg-black/60 px-1.5 text-xs text-white';
+        del.addEventListener('click', () => {
+            const idx = [...pastedFiles.files].indexOf(file);
+            if (idx > -1) pastedFiles.items.remove(idx);
+            pasteInput.files = pastedFiles.files;
+            URL.revokeObjectURL(img.src);
+            wrap.remove();
+            if (!pastedFiles.files.length) pastePreviews.classList.add('hidden');
+        });
+        wrap.append(img, del);
+        pastePreviews.appendChild(wrap);
+        pastePreviews.classList.remove('hidden');
+        pastePreviews.classList.add('flex');
+        return true;
+    }
+
+    // Ctrl+V / Cmd+V anywhere on the page (except while typing in a text field,
+    // so pasting text into inputs keeps working normally).
+    document.addEventListener('paste', (e) => {
+        const t = e.target;
+        if (t.matches?.('input:not([type=file]), textarea, [contenteditable]')) return;
+        let added = false;
+        for (const item of e.clipboardData?.items || []) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                if (addPastedImage(item.getAsFile())) added = true;
+            }
+        }
+        if (added) e.preventDefault();
+    });
+
+    // Button fallback via the async Clipboard API (needs a user gesture; not
+    // available in every browser — falls back to the Ctrl+V hint).
+    document.getElementById('pasteImageBtn')?.addEventListener('click', async () => {
+        if (!navigator.clipboard?.read) {
+            showPasteError("Ce navigateur ne permet pas la lecture du presse-papiers — utilisez Ctrl+V directement.");
+            return;
+        }
+        try {
+            let added = false;
+            for (const item of await navigator.clipboard.read()) {
+                const type = item.types.find((t) => t.startsWith('image/'));
+                if (type && addPastedImage(await item.getType(type))) added = true;
+            }
+            if (!added) showPasteError("Aucune image dans le presse-papiers. Copiez une image puis réessayez.");
+        } catch (err) {
+            showPasteError("Lecture du presse-papiers refusée — utilisez Ctrl+V directement.");
+        }
     });
 
     // Seed the recent list from whatever colours this product already has
