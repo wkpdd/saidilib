@@ -20,4 +20,16 @@ class ProductImage extends Model
             ? $this->path
             : asset('storage/' . $this->path);
     }
+
+    /** Compressed WebP hero-size URL (falls back to the raw asset URL for external images). */
+    public function getHeroUrlAttribute(): string
+    {
+        return \App\Support\Thumbnailer::heroUrl($this->path) ?? $this->url;
+    }
+
+    /** Small WebP thumbnail URL for gallery strips (falls back to the raw asset URL). */
+    public function getThumbUrlAttribute(): string
+    {
+        return \App\Support\Thumbnailer::url($this->path, 300) ?? $this->url;
+    }
 }

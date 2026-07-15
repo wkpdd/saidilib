@@ -66,7 +66,8 @@ class ProductImageSearchController extends Controller
             return response()->json(['ok' => false, 'error' => "Le fichier téléchargé n'est pas une image valide."], 422);
         }
 
-        $watermarked = Watermarker::apply($bytes, public_path('logov2.jpeg'));
+        $optimized = \App\Support\ImageOptimizer::optimize($bytes);
+        $watermarked = Watermarker::apply($optimized, public_path('logov2.jpeg'));
 
         $path = 'products/' . $product->slug . '-google-' . Str::random(8) . '.jpg';
         Storage::disk('public')->put($path, $watermarked);

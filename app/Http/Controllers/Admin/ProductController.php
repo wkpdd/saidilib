@@ -142,9 +142,13 @@ class ProductController extends Controller
             }
         }
 
-        // Uploaded files
+        // Uploaded files — optimised (resized + recompressed) before saving,
+        // so the stored original itself is web-appropriate, not just its
+        // thumbnails (a raw phone photo can be 6-8MB otherwise).
         foreach ((array) $request->file('images', []) as $file) {
-            $path = $file->store('products', 'public');
+            $optimized = \App\Support\ImageOptimizer::optimize(file_get_contents($file->getRealPath()));
+            $path = 'products/' . \Illuminate\Support\Str::random(32) . '.jpg';
+            \Illuminate\Support\Facades\Storage::disk('public')->put($path, $optimized);
             \App\Support\Thumbnailer::generateAll($path);
             $product->images()->create(['path' => $path, 'sort_order' => $product->images()->count()]);
         }

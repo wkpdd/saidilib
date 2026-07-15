@@ -92,6 +92,15 @@ class Product extends Model
             ?? $this->main_image_url;
     }
 
+    /** Compressed WebP hero image for the product detail page (falls back gracefully). */
+    public function getHeroImageUrlAttribute(): string
+    {
+        $path = $this->mainImagePath();
+
+        return ($path ? \App\Support\Thumbnailer::heroUrl($path) : null)
+            ?? $this->main_image_url;
+    }
+
     /** Responsive srcset ("<url> 300w, <url> 600w") for the card image. */
     public function getCardSrcsetAttribute(): ?string
     {

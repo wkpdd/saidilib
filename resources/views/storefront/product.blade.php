@@ -34,15 +34,15 @@
         {{-- Gallery --}}
         <div>
             <div class="card overflow-hidden">
-                <img data-main-image src="{{ $product->main_image_url }}" alt="{{ $product->name }}"
+                <img data-main-image src="{{ $product->hero_image_url }}" alt="{{ $product->name }}"
                      class="aspect-square w-full bg-slate-100 object-cover">
             </div>
             @if ($product->images->count() > 1)
                 <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
                     @foreach ($product->images as $img)
-                        <button type="button" data-thumb="{{ $img->url }}"
+                        <button type="button" data-thumb="{{ $img->hero_url }}"
                             class="h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-1 ring-slate-200 {{ $loop->first ? 'ring-2 ring-brand-500' : '' }}">
-                            <img src="{{ $img->url }}" class="h-full w-full object-cover" alt="">
+                            <img src="{{ $img->thumb_url }}" class="h-full w-full object-cover" alt="">
                         </button>
                     @endforeach
                 </div>
@@ -99,7 +99,7 @@
                             'size'  => $v->size,
                             'stock' => (int) $v->stock,
                             'delta' => (float) $v->price_delta,
-                            'image' => $v->image?->url,
+                            'image' => $v->image?->hero_url,
                         ])->values();
                     @endphp
                     <div data-variants='@json($variantData)'
