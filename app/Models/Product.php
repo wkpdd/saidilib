@@ -51,6 +51,16 @@ class Product extends Model
         return $this->tr('name') ?? '';
     }
 
+    /**
+     * Storefront display title: name + référence + marque combined,
+     * e.g. "Crayon H2 P34 Techno". Empty parts are skipped, so products
+     * without a SKU or brand just show their plain name.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return trim(implode(' ', array_filter([$this->name, $this->sku, $this->brand])));
+    }
+
     public function getShortDescAttribute(): ?string
     {
         return $this->tr('short_desc');

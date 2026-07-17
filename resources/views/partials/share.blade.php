@@ -2,14 +2,14 @@
     use App\Models\Setting;
     // $url can be passed to override (e.g. share the PUBLIC product page from admin).
     $shareUrl  = ($url ?? null) ?: url()->current();
-    $shareText = $product->name . ' — ' . number_format((float) $product->price, 2, ',', ' ') . ' ' . Setting::get('currency', 'DA')
+    $shareText = $product->display_name . ' — ' . number_format((float) $product->price, 2, ',', ' ') . ' ' . Setting::get('currency', 'DA')
                . ' · ' . Setting::get('store_name', 'Saidi Papetrie') . ' (paiement à la livraison)';
     $u = rawurlencode($shareUrl);
     $t = rawurlencode($shareText);
 @endphp
 
 <div class="mt-6 border-t border-slate-100 pt-5"
-     data-share-root data-url="{{ $shareUrl }}" data-text="{{ $shareText }}" data-title="{{ $product->name }}">
+     data-share-root data-url="{{ $shareUrl }}" data-text="{{ $shareText }}" data-title="{{ $product->display_name }}">
     <p class="mb-3 text-sm font-semibold text-ink-700">{{ __('shop.share_product') }}</p>
 
     <div class="flex flex-wrap items-center gap-2">

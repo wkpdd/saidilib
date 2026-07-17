@@ -28,8 +28,8 @@
             <div class="grid grid-cols-2 gap-4">
                 @foreach ($featured->take(4) as $p)
                     <div class="rounded-2xl bg-white/10 p-3 backdrop-blur ring-1 ring-white/20 {{ $loop->iteration % 2 ? 'translate-y-4' : '' }}">
-                        <img src="{{ $p->card_image_url }}" width="300" height="300" loading="lazy" decoding="async" class="aspect-square w-full rounded-xl object-cover" alt="{{ $p->name }}">
-                        <p class="mt-2 truncate text-sm font-medium">{{ $p->name }}</p>
+                        <img src="{{ $p->card_image_url }}" width="300" height="300" loading="lazy" decoding="async" class="aspect-square w-full rounded-xl object-cover" alt="{{ $p->display_name }}">
+                        <p class="mt-2 truncate text-sm font-medium">{{ $p->display_name }}</p>
                         <p class="text-sm font-bold text-accent">@money($p->price)</p>
                     </div>
                 @endforeach
@@ -121,13 +121,13 @@
                     <div class="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
                         <img src="{{ $kid->card_image_url }}"
                              @if ($kid->card_srcset) srcset="{{ $kid->card_srcset }}" sizes="(min-width:640px) 22vw, 45vw" @endif
-                             alt="{{ $kid->name }}" width="300" height="300" loading="lazy" decoding="async"
+                             alt="{{ $kid->display_name }}" width="300" height="300" loading="lazy" decoding="async"
                              class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
                         @if ($kid->on_sale)
                             <span class="absolute start-2 top-2 badge bg-accent text-white">-{{ $kid->discount_percent }}%</span>
                         @endif
                     </div>
-                    <h3 class="mt-2 line-clamp-1 px-1 text-sm font-semibold">{{ $kid->name }}</h3>
+                    <h3 class="mt-2 line-clamp-1 px-1 text-sm font-semibold">{{ $kid->display_name }}</h3>
                     <p class="px-1 pb-1 text-sm font-bold text-brand-700">@money($kid->price)</p>
                 </a>
             @endforeach

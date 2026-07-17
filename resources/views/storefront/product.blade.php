@@ -1,19 +1,19 @@
 @extends('layouts.app')
-@section('title', $product->name . ' — ' . \App\Models\Setting::get('store_name'))
+@section('title', $product->display_name . ' — ' . \App\Models\Setting::get('store_name'))
 @section('meta_description', $product->short_desc)
 
 @push('head')
     {{-- Open Graph / Twitter cards: make shared links render as rich posts --}}
     <meta property="og:type" content="product">
     <meta property="og:site_name" content="{{ \App\Models\Setting::get('store_name', 'Saidi Papetrie') }}">
-    <meta property="og:title" content="{{ $product->name }}">
+    <meta property="og:title" content="{{ $product->display_name }}">
     <meta property="og:description" content="{{ $product->short_desc ?: \Illuminate\Support\Str::limit(strip_tags($product->description), 150) }}">
     <meta property="og:image" content="{{ $product->main_image_url }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="product:price:amount" content="{{ (float) $product->price }}">
     <meta property="product:price:currency" content="{{ \App\Models\Setting::get('currency', 'DA') }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $product->name }}">
+    <meta name="twitter:title" content="{{ $product->display_name }}">
     <meta name="twitter:description" content="{{ $product->short_desc }}">
     <meta name="twitter:image" content="{{ $product->main_image_url }}">
 @endpush
@@ -27,14 +27,14 @@
             <a href="{{ route('category', $product->category->slug) }}" class="hover:text-brand-700">{{ $product->category->name }}</a>
             <span class="mx-1">/</span>
         @endif
-        <span class="text-ink-900">{{ $product->name }}</span>
+        <span class="text-ink-900">{{ $product->display_name }}</span>
     </nav>
 
     <div class="grid gap-8 lg:grid-cols-2">
         {{-- Gallery --}}
         <div>
             <div class="card overflow-hidden">
-                <img data-main-image src="{{ $product->hero_image_url }}" alt="{{ $product->name }}"
+                <img data-main-image src="{{ $product->hero_image_url }}" alt="{{ $product->display_name }}"
                      class="aspect-square w-full bg-slate-100 object-cover">
             </div>
             @if ($product->images->count() > 1)
@@ -54,7 +54,7 @@
             @if ($product->category)
                 <a href="{{ route('category', $product->category->slug) }}" class="text-sm font-semibold uppercase tracking-wide text-brand-600">{{ $product->category->name }}</a>
             @endif
-            <h1 class="mt-1 font-display text-2xl font-bold sm:text-3xl">{{ $product->name }}</h1>
+            <h1 class="mt-1 font-display text-2xl font-bold sm:text-3xl">{{ $product->display_name }}</h1>
 
             <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
                 @if ($product->brand)<span>{{ __('shop.brand') }}: <b class="text-ink-700">{{ $product->brand }}</b></span>@endif

@@ -90,7 +90,7 @@ class SocialPublisher
     {
         $price = number_format((float) $product->price, 2, ',', ' ') . ' ' . Setting::get('currency', 'DA');
         $lines = [
-            $product->name_fr,
+            trim(implode(' ', array_filter([$product->name_fr, $product->sku, $product->brand]))),
             '💰 ' . $price . ' — 💵 Paiement à la livraison',
             $product->short_desc_fr,
             '🛒 ' . route('product', $product->slug),
