@@ -73,8 +73,28 @@
 
             <label class="label">Téléverser des images</label>
             <input type="file" name="images[]" multiple accept="image/*" class="input">
+
+            {{-- Paste from clipboard: Ctrl+V anywhere on the page, or the button.
+                 Pasted images live in their own hidden images[] input so they
+                 merge with (never overwrite) files picked above. --}}
+            <div class="mt-3 rounded-xl border border-dashed border-slate-300 p-3 text-center">
+                <input type="file" name="images[]" multiple accept="image/*" id="pastedImages" class="hidden">
+                <button type="button" id="pasteImageBtn" class="btn-ghost">📋 Coller une image du presse-papiers</button>
+                <p class="mt-1 text-xs text-slate-400">Astuce : <b>Ctrl+V</b> (ou Cmd+V) fonctionne directement sur cette page.</p>
+                <p id="pasteError" class="mt-1 hidden text-xs text-red-600"></p>
+                <div id="pastePreviews" class="mt-2 hidden flex-wrap justify-center gap-2"></div>
+            </div>
+
             <label class="label mt-3">…ou coller des URLs (une par ligne)</label>
             <textarea name="image_urls" rows="2" class="input" placeholder="https://…"></textarea>
+
+            @if ($product->exists)
+                <button type="button" id="openImageSearch" class="btn-ghost mt-3">
+                    🔍 Rechercher des images (Google) — logo ajouté automatiquement
+                </button>
+            @else
+                <p class="mt-3 text-xs text-slate-400">💡 Enregistrez d'abord le produit pour utiliser la recherche d'images Google.</p>
+            @endif
         </div>
 
         {{-- Sizes / variants --}}
@@ -84,6 +104,13 @@
                 <button type="button" onclick="addVariant()" class="text-sm font-semibold text-brand-700">+ Ajouter</button>
             </div>
             <p class="mb-3 text-xs text-slate-400">Une ligne = une combinaison <b>couleur + taille</b> avec son propre stock. Le <b>nom de la couleur est facultatif</b> — choisir la pastille suffit. La colonne <b>Photo</b> lie la couleur à une image. Laissez <b>Stock</b> vide si vous ne suivez pas le stock par variante (aucune option ne sera bloquée).</p>
+
+            {{-- Recent colours — remembered on this device, click to reuse instantly --}}
+            <div id="recentColors" class="mb-3 hidden">
+                <p class="mb-1 text-xs font-semibold text-slate-500">🕘 Couleurs récentes (cliquer pour ajouter une ligne)</p>
+                <div data-chips class="flex flex-wrap gap-1.5"></div>
+            </div>
+
             @php $imgOpts = $product->exists ? $product->images->values() : collect(); @endphp
             <div class="mb-1 hidden grid-cols-12 gap-2 px-1 text-[11px] font-semibold uppercase text-slate-400 sm:grid">
                 <span class="col-span-3">Couleur (optionnel)</span><span class="col-span-1">●</span><span class="col-span-2">Taille</span><span class="col-span-1">+Prix</span><span class="col-span-2">Stock</span><span class="col-span-2">Photo</span><span class="col-span-1"></span>
@@ -93,7 +120,7 @@
                     <div class="grid grid-cols-12 items-center gap-2" data-variant-row>
                         <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $v['id'] ?? '' }}">
                         <input type="hidden" name="variants[{{ $i }}][has_color]" value="{{ (!empty($v['color']) || !empty($v['color_hex'])) ? 1 : 0 }}" data-has-color>
-                        <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge (optionnel)" class="input col-span-3">
+                        <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge (optionnel)" class="input col-span-3" data-color-name>
                         <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
                         <input name="variants[{{ $i }}][size]" value="{{ $v['size'] ?? '' }}" placeholder="L / 24x32" class="input col-span-2">
                         <input name="variants[{{ $i }}][price_delta]" value="{{ $v['price_delta'] ?? 0 }}" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
@@ -181,6 +208,25 @@
     </div>
 </form>
 
+@if ($product->exists)
+    {{-- Google Image Search modal --}}
+    <div id="imageSearchModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 p-4">
+        <div class="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5">
+            <div class="mb-3 flex items-center justify-between">
+                <h3 class="font-semibold text-ink-900">🔍 Rechercher des images</h3>
+                <button type="button" id="closeImageSearch" class="grid h-8 w-8 place-items-center rounded-lg hover:bg-slate-100">✕</button>
+            </div>
+            <form id="imageSearchForm" class="flex gap-2">
+                <input type="text" id="imageSearchQuery" value="{{ $product->name_fr }}" class="input flex-1" placeholder="Terme de recherche…">
+                <button type="submit" class="btn-primary">Rechercher</button>
+            </form>
+            <p class="mt-2 text-xs text-amber-600">⚠️ Utilisez uniquement des images libres de droits ou dont vous avez l'autorisation. Le logo de la boutique sera ajouté en bas à droite.</p>
+            <div id="imageSearchStatus" class="mt-3 text-sm text-slate-500"></div>
+            <div id="imageSearchResults" class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4"></div>
+        </div>
+    </div>
+@endif
+
 @push('scripts')
 <script>
     let vIndex = {{ count(old('variants', $product->variants->toArray() ?: [])) }};
@@ -189,14 +235,16 @@
         return '<option value="">— Photo —</option>' +
             imgOptions.map((o) => `<option value="${o.id}">${o.label}</option>`).join('');
     }
-    function addVariant() {
+    function addVariant(prefill) {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-12 items-center gap-2';
         row.setAttribute('data-variant-row', '');
+        const hex = prefill?.hex || '#000000';
+        const name = prefill?.name || '';
         row.innerHTML = `
-            <input type="hidden" name="variants[${vIndex}][has_color]" value="0" data-has-color>
-            <input name="variants[${vIndex}][color]" placeholder="Rouge (optionnel)" class="input col-span-3">
-            <input name="variants[${vIndex}][color_hex]" type="color" value="#000000" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
+            <input type="hidden" name="variants[${vIndex}][has_color]" value="${prefill ? 1 : 0}" data-has-color>
+            <input name="variants[${vIndex}][color]" value="${name}" placeholder="Rouge (optionnel)" class="input col-span-3" data-color-name>
+            <input name="variants[${vIndex}][color_hex]" type="color" value="${hex}" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
             <input name="variants[${vIndex}][size]" placeholder="L / 24x32" class="input col-span-2">
             <input name="variants[${vIndex}][price_delta]" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
             <input name="variants[${vIndex}][stock]" type="number" min="0" placeholder="Stock (vide = illimité)" class="input col-span-2">
@@ -208,11 +256,15 @@
     }
 
     // Picking a colour swatch (even without typing a name) marks the row as a
-    // "colour" variant, so the storefront picker shows it as a swatch.
+    // "colour" variant, so the storefront picker shows it as a swatch — and
+    // remembers it on this device so it can be reused instantly next time.
     document.getElementById('variants').addEventListener('input', (e) => {
         if (e.target.matches('[data-color-hex]')) {
-            const flag = e.target.closest('[data-variant-row]').querySelector('[data-has-color]');
+            const row = e.target.closest('[data-variant-row]');
+            const flag = row.querySelector('[data-has-color]');
             if (flag) flag.value = '1';
+            const nameInput = row.querySelector('[data-color-name]');
+            saveRecentColor(nameInput ? nameInput.value.trim() : '', e.target.value);
         }
     });
 
@@ -222,6 +274,221 @@
             document.getElementById('skuInput').value = code;
         });
     });
+    // A typed colour name (with a colour already picked) also updates the
+    // remembered entry's label.
+    document.getElementById('variants').addEventListener('change', (e) => {
+        if (e.target.matches('[data-color-name]')) {
+            const row = e.target.closest('[data-variant-row]');
+            if (row.querySelector('[data-has-color]')?.value === '1') {
+                saveRecentColor(e.target.value.trim(), row.querySelector('[data-color-hex]').value);
+            }
+        }
+    });
+
+    // ── Recent colours (remembered on this device via localStorage) ──────
+    const RECENT_COLORS_KEY = 'saidi_recent_colors';
+
+    function getRecentColors() {
+        try { return JSON.parse(localStorage.getItem(RECENT_COLORS_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function saveRecentColor(name, hex) {
+        if (!hex) return;
+        let list = getRecentColors().filter((c) => c.hex.toLowerCase() !== hex.toLowerCase());
+        list.unshift({ name, hex });
+        localStorage.setItem(RECENT_COLORS_KEY, JSON.stringify(list.slice(0, 12)));
+        renderRecentColors();
+    }
+    function renderRecentColors() {
+        const wrap = document.getElementById('recentColors');
+        if (!wrap) return;
+        const list = getRecentColors();
+        wrap.classList.toggle('hidden', list.length === 0);
+        wrap.querySelector('[data-chips]').innerHTML = list.map((c) => `
+            <button type="button" data-recent-chip data-hex="${c.hex}" data-name="${(c.name || '').replace(/"/g, '&quot;')}"
+                    title="${c.name || c.hex}"
+                    class="grid h-8 w-8 place-items-center rounded-full ring-1 ring-slate-200 transition hover:ring-2 hover:ring-brand-500"
+                    style="background:${c.hex}"></button>`).join('');
+    }
+    document.getElementById('recentColors')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-recent-chip]');
+        if (!chip) return;
+        addVariant({ name: chip.dataset.name, hex: chip.dataset.hex });
+    });
+
+    // ── Paste image from clipboard ───────────────────────────────────────
+    // Pasted images are collected in a DataTransfer and mirrored into the
+    // hidden #pastedImages input, so they submit alongside (not instead of)
+    // files chosen in the regular picker, through the same optimised pipeline.
+    const pasteInput = document.getElementById('pastedImages');
+    const pastePreviews = document.getElementById('pastePreviews');
+    const pasteError = document.getElementById('pasteError');
+    const pastedFiles = new DataTransfer();
+    let pasteCounter = 0;
+
+    function showPasteError(msg) {
+        if (!pasteError) return;
+        pasteError.textContent = msg;
+        pasteError.classList.remove('hidden');
+        setTimeout(() => pasteError.classList.add('hidden'), 5000);
+    }
+
+    function addPastedImage(blob) {
+        if (!blob || !blob.type.startsWith('image/')) return false;
+        const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        const file = new File([blob], `collee-${++pasteCounter}.${ext}`, { type: blob.type });
+        pastedFiles.items.add(file);
+        pasteInput.files = pastedFiles.files;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'relative h-20 w-20 overflow-hidden rounded-xl ring-1 ring-slate-200';
+        const img = document.createElement('img');
+        img.className = 'h-full w-full object-cover';
+        img.src = URL.createObjectURL(file);
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = '✕';
+        del.title = 'Retirer';
+        del.className = 'absolute right-0 top-0 rounded-bl-lg bg-black/60 px-1.5 text-xs text-white';
+        del.addEventListener('click', () => {
+            const idx = [...pastedFiles.files].indexOf(file);
+            if (idx > -1) pastedFiles.items.remove(idx);
+            pasteInput.files = pastedFiles.files;
+            URL.revokeObjectURL(img.src);
+            wrap.remove();
+            if (!pastedFiles.files.length) pastePreviews.classList.add('hidden');
+        });
+        wrap.append(img, del);
+        pastePreviews.appendChild(wrap);
+        pastePreviews.classList.remove('hidden');
+        pastePreviews.classList.add('flex');
+        return true;
+    }
+
+    // Ctrl+V / Cmd+V anywhere on the page (except while typing in a text field,
+    // so pasting text into inputs keeps working normally).
+    document.addEventListener('paste', (e) => {
+        const t = e.target;
+        if (t.matches?.('input:not([type=file]), textarea, [contenteditable]')) return;
+        let added = false;
+        for (const item of e.clipboardData?.items || []) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                if (addPastedImage(item.getAsFile())) added = true;
+            }
+        }
+        if (added) e.preventDefault();
+    });
+
+    // Button fallback via the async Clipboard API (needs a user gesture; not
+    // available in every browser — falls back to the Ctrl+V hint).
+    document.getElementById('pasteImageBtn')?.addEventListener('click', async () => {
+        if (!navigator.clipboard?.read) {
+            showPasteError("Ce navigateur ne permet pas la lecture du presse-papiers — utilisez Ctrl+V directement.");
+            return;
+        }
+        try {
+            let added = false;
+            for (const item of await navigator.clipboard.read()) {
+                const type = item.types.find((t) => t.startsWith('image/'));
+                if (type && addPastedImage(await item.getType(type))) added = true;
+            }
+            if (!added) showPasteError("Aucune image dans le presse-papiers. Copiez une image puis réessayez.");
+        } catch (err) {
+            showPasteError("Lecture du presse-papiers refusée — utilisez Ctrl+V directement.");
+        }
+    });
+
+    // Seed the recent list from whatever colours this product already has
+    // saved, so the list isn't empty on a fresh page load.
+    document.querySelectorAll('#variants [data-variant-row]').forEach((row) => {
+        if (row.querySelector('[data-has-color]')?.value === '1') {
+            const hex = row.querySelector('[data-color-hex]')?.value;
+            const name = row.querySelector('[data-color-name]')?.value?.trim();
+            if (hex) saveRecentColor(name, hex);
+        }
+    });
+    renderRecentColors();
+
+    @if ($product->exists)
+    // ── Google Image Search modal ─────────────────────────────────────────
+    const searchModal = document.getElementById('imageSearchModal');
+    if (searchModal) {
+        const openBtn = document.getElementById('openImageSearch');
+        const closeBtn = document.getElementById('closeImageSearch');
+        const form = document.getElementById('imageSearchForm');
+        const queryInput = document.getElementById('imageSearchQuery');
+        const status = document.getElementById('imageSearchStatus');
+        const results = document.getElementById('imageSearchResults');
+
+        openBtn.addEventListener('click', () => {
+            searchModal.classList.remove('hidden');
+            searchModal.classList.add('flex');
+        });
+        closeBtn.addEventListener('click', () => {
+            searchModal.classList.add('hidden');
+            searchModal.classList.remove('flex');
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const q = queryInput.value.trim();
+            if (!q) return;
+            status.textContent = 'Recherche…';
+            results.innerHTML = '';
+            try {
+                const res = await fetch(`{{ route('admin.products.imagesearch.search') }}?q=${encodeURIComponent(q)}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    status.textContent = data.error || 'Erreur de recherche.';
+                    return;
+                }
+                if (!data.results || !data.results.length) {
+                    status.textContent = 'Aucun résultat.';
+                    return;
+                }
+                status.textContent = `${data.results.length} résultat(s) — cliquez pour importer.`;
+                results.innerHTML = data.results.map((r) => `
+                    <button type="button" data-img-url="${r.image.replace(/"/g, '&quot;')}"
+                            class="group overflow-hidden rounded-lg ring-1 ring-slate-200 hover:ring-2 hover:ring-brand-500">
+                        <img src="${r.thumbnail}" class="aspect-square w-full object-cover" loading="lazy" alt="">
+                    </button>`).join('');
+            } catch (err) {
+                status.textContent = 'Erreur de connexion.';
+            }
+        });
+
+        results.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-img-url]');
+            if (!btn) return;
+            status.textContent = 'Import en cours…';
+            btn.disabled = true;
+            try {
+                const res = await fetch('{{ route('admin.products.imagesearch.attach', $product) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                            || document.querySelector('input[name=_token]').value,
+                    },
+                    body: JSON.stringify({ image_url: btn.dataset.imgUrl }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    status.textContent = 'Image importée ✓ — actualisation…';
+                    location.reload();
+                } else {
+                    status.textContent = data.error || "Échec de l'import.";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                status.textContent = 'Erreur de connexion.';
+                btn.disabled = false;
+            }
+        });
+    }
+    @endif
 </script>
 @endpush
 @push('scripts')

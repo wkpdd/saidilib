@@ -12,7 +12,7 @@
             @isset($product)
                 fbq('track', 'ViewContent', {
                     content_ids: ['{{ $product->sku ?? $product->id }}'],
-                    content_name: @json($product->name),
+                    content_name: @json($product->display_name),
                     content_type: 'product',
                     value: {{ (float) $product->price }},
                     currency: 'DZD'

@@ -33,7 +33,7 @@ class CartService
             $cart[$key] = [
                 'product_id'  => $product->id,
                 'variant_id'  => $variant?->id,
-                'name'        => $product->name,
+                'name'        => $product->display_name,
                 'variant'     => $variant?->label,
                 'slug'        => $product->slug,
                 'price'       => $unit,

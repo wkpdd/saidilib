@@ -15,8 +15,11 @@ use Illuminate\Support\Facades\Storage;
  */
 class Thumbnailer
 {
-    /** Widths (px) we generate for responsive srcsets. */
+    /** Widths (px) we generate for responsive srcsets (grid/card display). */
     public const WIDTHS = [300, 600];
+
+    /** Larger size for the product detail page's hero photo. */
+    public const HERO_WIDTH = 1000;
 
     /** WebP quality (0-100). 78 is visually clean while cutting weight hard. */
     private const QUALITY = 78;
@@ -59,13 +62,19 @@ class Thumbnailer
         }
 
         $count = 0;
-        foreach (self::WIDTHS as $w) {
+        foreach ([...self::WIDTHS, self::HERO_WIDTH] as $w) {
             if (self::generate($path, $w)) {
                 $count++;
             }
         }
 
         return $count;
+    }
+
+    /** Compressed WebP URL for the product detail page's large hero photo. */
+    public static function heroUrl(?string $path): ?string
+    {
+        return self::url($path, self::HERO_WIDTH);
     }
 
     private static function thumbPath(string $path, int $width): string

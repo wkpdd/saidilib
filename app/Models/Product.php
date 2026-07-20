@@ -51,6 +51,16 @@ class Product extends Model
         return $this->tr('name') ?? '';
     }
 
+    /**
+     * Storefront display title: name + référence + marque combined,
+     * e.g. "Crayon H2 P34 Techno". Empty parts are skipped, so products
+     * without a SKU or brand just show their plain name.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return trim(implode(' ', array_filter([$this->name, $this->sku, $this->brand])));
+    }
+
     public function getShortDescAttribute(): ?string
     {
         return $this->tr('short_desc');
@@ -89,6 +99,15 @@ class Product extends Model
         $path = $this->mainImagePath();
 
         return ($path ? \App\Support\Thumbnailer::url($path, 300) : null)
+            ?? $this->main_image_url;
+    }
+
+    /** Compressed WebP hero image for the product detail page (falls back gracefully). */
+    public function getHeroImageUrlAttribute(): string
+    {
+        $path = $this->mainImagePath();
+
+        return ($path ? \App\Support\Thumbnailer::heroUrl($path) : null)
             ?? $this->main_image_url;
     }
 
