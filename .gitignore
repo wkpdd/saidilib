@@ -24,3 +24,10 @@ yarn-error.log
 
 /build
 .DS_Store
+
+# Android signing key — never commit
+android/keystore/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties

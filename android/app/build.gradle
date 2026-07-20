@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application' version '9.0.0'
+}
+
+android {
+    namespace 'dz.saidi.papetrie'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'dz.saidi.papetrie'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../keystore/saidi-release.keystore')
+            storePassword System.getenv('SAIDI_KEYSTORE_PASS') ?: 'saidi2026'
+            keyAlias 'saidi'
+            keyPassword System.getenv('SAIDI_KEYSTORE_PASS') ?: 'saidi2026'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

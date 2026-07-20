@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand orange status bar, no action bar: the site IS the UI. -->
+    <style name="Theme.Saidi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#B85F00</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowBackground">#FFF7ED</item>
+    </style>
+</resources>
