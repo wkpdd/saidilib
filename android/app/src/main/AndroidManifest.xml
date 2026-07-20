@@ -8,7 +8,8 @@
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Saidi"
         android:usesCleartextTraffic="false"
-        android:allowBackup="true">
+        android:allowBackup="true"
+        android:enableOnBackInvokedCallback="false">
 
         <activity
             android:name=".MainActivity"
