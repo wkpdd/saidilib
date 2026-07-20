@@ -44,6 +44,96 @@ class OrderController extends Controller
         return response()->json(['order' => self::full($order)]);
     }
 
+    /**
+     * Staff-entered order (phone/counter sale) — same pipeline as the web
+     * checkout: item snapshots, stock decrement, bell + Telegram alerts.
+     */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'customer_name'      => 'required|string|max:120',
+            'phone'              => 'required|string|max:30',
+            'wilaya_id'          => 'required|exists:wilayas,id',
+            'commune'            => 'nullable|string|max:120',
+            'address'            => 'nullable|string|max:500',
+            'delivery_type'      => 'required|in:home,stopdesk',
+            'client_id'          => 'nullable|exists:clients,id',
+            'notes'              => 'nullable|string|max:1000',
+            'status'             => 'nullable|in:pending,confirmed',
+            'items'              => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.variant_id' => 'nullable|integer',
+            'items.*.qty'        => 'required|integer|min:1|max:9999',
+            'items.*.unit_price' => 'nullable|numeric|min:0|max:99999999',
+        ]);
+
+        $wilaya = \App\Models\Wilaya::findOrFail($data['wilaya_id']);
+        $deliveryFee = $wilaya->feeFor($data['delivery_type']);
+
+        $order = DB::transaction(function () use ($data, $wilaya, $deliveryFee, $request) {
+            $subtotal = 0.0;
+            $lines = [];
+            foreach ($data['items'] as $line) {
+                $product = \App\Models\Product::findOrFail($line['product_id']);
+                $variant = ! empty($line['variant_id'])
+                    ? $product->variants()->where('id', $line['variant_id'])->first()
+                    : null;
+                $unit = $line['unit_price'] ?? ((float) $product->price + (float) ($variant->price_delta ?? 0));
+                $subtotal += $unit * $line['qty'];
+                $lines[] = compact('product', 'variant', 'unit') + ['qty' => $line['qty']];
+            }
+
+            $order = Order::create([
+                'reference'      => Order::generateReference(),
+                'client_id'      => $data['client_id'] ?? null,
+                'customer_name'  => $data['customer_name'],
+                'phone'          => $data['phone'],
+                'wilaya_id'      => $wilaya->id,
+                'commune'        => $data['commune'] ?? null,
+                'address'        => $data['address'] ?? null,
+                'delivery_type'  => $data['delivery_type'],
+                'subtotal'       => $subtotal,
+                'delivery_fee'   => $deliveryFee,
+                'total'          => $subtotal + $deliveryFee,
+                'payment_method' => 'cod',
+                'status'         => $data['status'] ?? 'confirmed',
+                'notes'          => $data['notes'] ?? null,
+                'utm_source'     => 'staff_app',
+            ]);
+
+            foreach ($lines as $l) {
+                $order->items()->create([
+                    'product_id'         => $l['product']->id,
+                    'product_variant_id' => $l['variant']?->id,
+                    'name'               => $l['product']->display_name,
+                    'variant_label'      => $l['variant']?->label_fr,
+                    'image'              => $l['product']->main_image_url,
+                    'unit_price'         => $l['unit'],
+                    'quantity'           => $l['qty'],
+                    'line_total'         => $l['unit'] * $l['qty'],
+                ]);
+                if ($l['product']->track_stock) {
+                    $l['product']->decrement('stock', $l['qty']);
+                }
+            }
+
+            return $order;
+        });
+
+        AdminNotification::raise(
+            'order',
+            "Commande {$order->reference} (app équipe)",
+            "{$order->customer_name} · " . number_format((float) $order->total, 2, ',', ' ') . ' DA · par ' . $request->user()->name,
+            route('admin.orders.show', $order),
+            '🧾'
+        );
+        dispatch(function () use ($order) {
+            app(\App\Services\TelegramNotifier::class)->orderCreated($order);
+        })->afterResponse();
+
+        return response()->json(['ok' => true, 'order' => self::full($order)], 201);
+    }
+
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate(['status' => 'required|in:' . implode(',', Order::STATUSES)]);
