@@ -1,24 +1,30 @@
-# Saidi Papetrie — application Android (APK)
+# Saidi Équipe — application Android native (équipe/admin)
 
-Coquille native minimale : toute la boutique (et l'admin) tourne dans une
-WebView plein écran chargée depuis **https://saidi.h47.io**. Aucun contenu
-n'est embarqué — chaque mise à jour du site est donc instantanément dans
-l'app, sans re-publier d'APK.
+Application **100% native (Kotlin + Jetpack Compose)** pour l'équipe du
+magasin. Aucune WebView : chaque écran est natif, rapide, pensé mobile.
+Elle parle au site via l'API `/api/v1/*` (jeton sécurisé par employé,
+permissions identiques à l'admin web).
 
-## Fonctionnalités de la coquille
-- Plein écran, barre de statut orange (marque), icône du logo.
-- Session/cookies persistants (connexion admin & client conservée).
-- **Téléversement de photos** depuis l'appareil photo ou la galerie
-  (formulaire produit admin).
-- Téléchargements (PDF tarifs, bordereaux) → navigateur système.
-- Liens `tel:`, WhatsApp, Facebook → application correspondante.
-- Bouton retour = navigation en arrière dans le site.
-- Page « Pas de connexion » avec bouton Réessayer.
+## Écrans
+- **Connexion** — email + mot de passe des comptes équipe existants.
+  (⚙️ « Adresse du serveur » permet de pointer vers un autre domaine.)
+- **Accueil** — commandes/recettes du jour, en attente, stock bas,
+  graphique 14 jours, dernières commandes.
+- **Commandes** — recherche + filtres par statut, détail complet,
+  changer le statut, **modifier les prix** (journalisé), **expédier via
+  Noest**, **rembourser** (espèces/avoir/livreur), appeler ou WhatsApp
+  le client en un geste.
+- **Produits** — recherche, filtre stock bas, **scanner code-barres/QR**
+  (caméra) pour trouver un produit par référence, modification rapide
+  prix/stock/visibilité.
+- **Clients & dettes** — soldes, limite de crédit, historique du grand
+  livre, nouvelle écriture (paiement/dette/ajustement), appel/WhatsApp.
+- **Alertes** — flux des notifications admin, badge non-lues.
+
+Chaque onglet n'apparaît que si l'employé a la permission correspondante
+(RBAC identique au site).
 
 ## Construire l'APK
-
-Prérequis : Android SDK (ou Android Studio) + Java 17+.
-
 ```bash
 cd android
 echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties   # une fois
@@ -27,19 +33,22 @@ gradle :app:assembleRelease
 # → app/build/outputs/apk/release/app-release.apk
 ```
 
+## Déploiement côté serveur
+L'app requiert l'API (branche `feature/android-app`) :
+fichiers `app/Http/Controllers/Api/*`, `app/Models/ApiToken.php`,
+`app/Http/Middleware/AuthApiToken.php`, `routes/api.php`,
+`bootstrap/app.php` + la migration **additive** `api_tokens`
+(`php artisan migrate` — ne touche aucune table existante).
+
+## Notifications push (FCM) — optionnel
+L'app est prête pour Firebase Cloud Messaging :
+1. Créez un projet sur https://console.firebase.google.com (gratuit),
+   ajoutez une app Android `dz.saidi.staff`.
+2. Téléchargez `google-services.json` dans `android/app/`.
+3. Reconstruisez : le plugin Google s'active automatiquement.
+En attendant, les alertes passent par le badge in-app + Telegram.
+
 ## Signature
-L'APK release est signé avec `keystore/saidi-release.keystore`
-(alias `saidi`). **Ce fichier n'est pas dans git** — gardez-en une copie
-précieusement : Google Play (et les mises à jour d'une app installée)
-exigent la MÊME clé pour toujours. Mot de passe par défaut `saidi2026`,
-surchargeable via la variable d'environnement `SAIDI_KEYSTORE_PASS`.
-
-## Installer sur un téléphone
-1. Copiez `app-release.apk` sur le téléphone (WhatsApp/USB/Drive).
-2. Ouvrez-le → autorisez « Installer des applications inconnues » si demandé.
-3. L'icône Saidi apparaît dans le tiroir d'applications.
-
-## Publier sur Google Play (optionnel)
-Play exige un **AAB** : `gradle :app:bundleRelease`
-(→ `app/build/outputs/bundle/release/app-release.aab`), un compte
-développeur Google Play (25 $ une fois), et la même clé de signature.
+Signé avec `keystore/saidi-release.keystore` (alias `saidi`,
+mot de passe `saidi2026`, surchargeable via `SAIDI_KEYSTORE_PASS`).
+**Jamais dans git — gardez une copie du keystore en lieu sûr.**

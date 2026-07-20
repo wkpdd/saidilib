@@ -1,14 +1,23 @@
 plugins {
+    // AGP 9 ships built-in Kotlin support — no separate kotlin.android plugin.
     id 'com.android.application' version '9.0.0'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
+    // FCM push (activated below only when google-services.json is present).
+    id 'com.google.gms.google-services' version '4.4.2' apply false
+}
+
+// Push notifications switch on automatically once the Firebase config exists.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
 }
 
 android {
-    namespace 'dz.saidi.papetrie'
+    namespace 'dz.saidi.staff'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'dz.saidi.papetrie'
-        minSdk 23
+        applicationId 'dz.saidi.staff'
+        minSdk 24
         targetSdk 36
         versionCode 1
         versionName '1.0'
@@ -30,8 +39,40 @@ android {
         }
     }
 
+    buildFeatures { compose true }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
+    }
+}
+
+dependencies {
+    def composeBom = platform('androidx.compose:compose-bom:2025.05.01')
+    implementation composeBom
+
+    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.activity:activity-compose:1.10.1'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.navigation:navigation-compose:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.0'
+
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    implementation 'io.coil-kt:coil-compose:2.7.0'
+
+    // Barcode/QR scanning via Google Play services (no camera permission needed).
+    implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
+
+    if (file('google-services.json').exists()) {
+        implementation 'com.google.firebase:firebase-messaging:24.1.0'
     }
 }
