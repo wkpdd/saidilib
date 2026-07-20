@@ -70,6 +70,8 @@ fun ProductDetailScreen(initialId: Long, onBack: () -> Unit) {
     var shortDesc by remember { mutableStateOf("") }
     var variants = remember { mutableStateListOf<EditableVariant>() }
     var categories by remember { mutableStateOf(listOf<CategoryInfo>()) }
+    var pickingColorFor by remember { mutableStateOf<Int?>(null) }
+    var suggestedColors by remember { mutableStateOf(listOf<String>()) }
 
     fun applyProduct(p: ProductFull) {
         productId = p.id
@@ -93,6 +95,10 @@ fun ProductDetailScreen(initialId: Long, onBack: () -> Unit) {
             try { applyProduct(ApiClient.service.productFull(initialId).product) }
             catch (e: Exception) { error = ApiClient.errorMessage(e) }
         }
+    }
+    // Extract dominant colours of the main photo → suggestions in the picker.
+    LaunchedEffect(images.firstOrNull()?.url) {
+        suggestedColors = suggestedColorsFrom(ctx, images.firstOrNull()?.url)
     }
     LaunchedEffect(toast) { toast?.let { snackbar.showSnackbar(it); toast = null } }
 
@@ -281,20 +287,20 @@ fun ProductDetailScreen(initialId: Long, onBack: () -> Unit) {
                 variants.forEachIndexed { idx, v ->
                     Card {
                         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                // Palette chips — one tap picks a colour.
-                                PALETTE.forEach { (n, hex) ->
-                                    Box(
-                                        Modifier.size(26.dp).clip(CircleShape)
-                                            .background(Color(android.graphics.Color.parseColor(hex)))
-                                            .clickable { variants[idx] = v.copy(color = n, hex = hex) },
-                                    )
-                                }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                // Current colour dot → opens the full picker (recent +
+                                // photo-suggested + palette + custom hue/shade).
+                                Box(
+                                    Modifier.size(38.dp).clip(CircleShape)
+                                        .background(parseHex(v.hex) ?: MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable { pickingColorFor = idx },
+                                )
+                                OutlinedButton(onClick = { pickingColorFor = idx }) { Text("🎨 Couleur") }
                                 Spacer(Modifier.weight(1f))
                                 Text("✕", color = MaterialTheme.colorScheme.error, modifier = Modifier.clickable { variants.removeAt(idx) }.padding(4.dp))
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedTextField(value = v.color, onValueChange = { variants[idx] = v.copy(color = it) }, label = { Text("Couleur") }, modifier = Modifier.weight(1.2f), singleLine = true)
+                                OutlinedTextField(value = v.color, onValueChange = { variants[idx] = v.copy(color = it) }, label = { Text("Nom couleur") }, modifier = Modifier.weight(1.2f), singleLine = true)
                                 OutlinedTextField(value = v.size, onValueChange = { variants[idx] = v.copy(size = it) }, label = { Text("Taille") }, modifier = Modifier.weight(1f), singleLine = true)
                                 OutlinedTextField(value = v.stock, onValueChange = { variants[idx] = v.copy(stock = it) }, label = { Text("Stock") }, modifier = Modifier.weight(0.8f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                             }
@@ -305,17 +311,27 @@ fun ProductDetailScreen(initialId: Long, onBack: () -> Unit) {
             }
         }
     }
+
+    // Colour picker for the tapped variant row.
+    pickingColorFor?.let { idx ->
+        if (idx < variants.size) {
+            ColorPickerDialog(
+                initialHex = variants[idx].hex.ifBlank { null },
+                suggested = suggestedColors,
+                onPick = { hex, name ->
+                    val row = variants[idx]
+                    variants[idx] = row.copy(hex = hex, color = row.color.ifBlank { name })
+                    pickingColorFor = null
+                },
+                onDismiss = { pickingColorFor = null },
+            )
+        } else pickingColorFor = null
+    }
 }
 
 data class EditableVariant(
     val id: Long = 0, val color: String = "", val hex: String = "",
     val size: String = "", val stock: String = "", val delta: String = "",
-)
-
-private val PALETTE = listOf(
-    "Rouge" to "#dc2626", "Bleu" to "#2563eb", "Vert" to "#16a34a",
-    "Jaune" to "#eab308", "Orange" to "#e07d00", "Rose" to "#ec4899",
-    "Violet" to "#8b5cf6", "Noir" to "#111111", "Blanc" to "#f8fafc",
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -340,13 +356,41 @@ private fun CategoryPicker(categories: List<CategoryInfo>, selected: Long?, onPi
 
 fun trimNum(v: Double): String = if (v == v.toLong().toDouble()) v.toLong().toString() else v.toString()
 
-/** Copy any content Uri into a cache file and wrap as a multipart part. */
+/**
+ * Compress ON the phone before uploading (longest edge ≤ 2000px, JPEG 85 —
+ * same targets as the server's ImageOptimizer): a raw 6-8MB camera shot
+ * becomes a few hundred KB, which matters a lot on 3G/4G.
+ */
 fun uriToPart(ctx: Context, uri: Uri): MultipartBody.Part {
     val dir = File(ctx.cacheDir, "photos").apply { mkdirs() }
     val file = File(dir, "upload-${System.currentTimeMillis()}.jpg")
-    ctx.contentResolver.openInputStream(uri).use { input ->
-        file.outputStream().use { out -> input!!.copyTo(out) }
+
+    // Pass 1: bounds only, to pick a power-of-two sample size (memory-safe).
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    ctx.contentResolver.openInputStream(uri).use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+    var sample = 1
+    while ((bounds.outWidth / sample).coerceAtLeast(bounds.outHeight / sample) > 4000) sample *= 2
+
+    val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+    val raw = ctx.contentResolver.openInputStream(uri).use {
+        android.graphics.BitmapFactory.decodeStream(it, null, opts)
     }
+
+    if (raw == null) {
+        // Undecodable? Send the original bytes; the server optimizer still runs.
+        ctx.contentResolver.openInputStream(uri).use { input ->
+            file.outputStream().use { out -> input!!.copyTo(out) }
+        }
+    } else {
+        val maxEdge = 2000f
+        val scale = minOf(1f, maxEdge / maxOf(raw.width, raw.height))
+        val bmp = if (scale < 1f) android.graphics.Bitmap.createScaledBitmap(
+            raw, (raw.width * scale).toInt(), (raw.height * scale).toInt(), true) else raw
+        file.outputStream().use { out -> bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out) }
+        if (bmp !== raw) bmp.recycle()
+        raw.recycle()
+    }
+
     return MultipartBody.Part.createFormData(
         "image", file.name, file.asRequestBody("image/jpeg".toMediaType())
     )
