@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
-fun OrdersScreen(onOpen: (Long) -> Unit) {
+fun OrdersScreen(onOpen: (Long) -> Unit, onNew: () -> Unit) {
     var orders by remember { mutableStateOf(listOf<OrderBrief>()) }
     var counts by remember { mutableStateOf(mapOf<String, Int>()) }
     var filter by remember { mutableStateOf<String?>(null) }
@@ -52,9 +52,12 @@ fun OrdersScreen(onOpen: (Long) -> Unit) {
         snapshotFlow { search }.debounce(400).collect { load() }
     }
 
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Commandes", fontWeight = FontWeight.Bold) })
-    }) { pad ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Commandes", fontWeight = FontWeight.Bold) }) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(onClick = onNew) { Text("+ Commande") }
+        },
+    ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             OutlinedTextField(
                 value = search, onValueChange = { search = it },

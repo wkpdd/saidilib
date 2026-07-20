@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
-fun ProductsScreen() {
+fun ProductsScreen(onOpen: (Long) -> Unit, onCreate: () -> Unit, onReceive: () -> Unit) {
     var products by remember { mutableStateOf(listOf<ProductBrief>()) }
     var search by remember { mutableStateOf("") }
     var lowStockOnly by remember { mutableStateOf(false) }
@@ -81,7 +81,17 @@ fun ProductsScreen() {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Produits", fontWeight = FontWeight.Bold) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Produits", fontWeight = FontWeight.Bold) },
+                actions = {
+                    if (dz.saidi.staff.data.Session.can("purchasing")) {
+                        TextButton(onClick = onReceive) { Text("\uD83D\uDCE5 R\u00e9ception") }
+                    }
+                    TextButton(onClick = onCreate) { Text("+ Nouveau") }
+                },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { scan() }) {
                 Icon(Icons.Filled.QrCodeScanner, null); Spacer(Modifier.width(8.dp)); Text("Scanner")
@@ -110,7 +120,7 @@ fun ProductsScreen() {
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(products) { p ->
-                        Card(Modifier.fillMaxWidth().clickable { editing = p }) {
+                        Card(Modifier.fillMaxWidth().clickable { onOpen(p.id) }) {
                             Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 AsyncImage(
                                     model = p.image, contentDescription = null,

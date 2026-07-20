@@ -81,11 +81,29 @@ fun Root() {
                     onLogout = { Session.clear(); loggedIn = false },
                 )
             }
-            composable("orders") { OrdersScreen(onOpen = { nav.navigate("order/$it") }) }
+            composable("orders") {
+                OrdersScreen(onOpen = { nav.navigate("order/$it") }, onNew = { nav.navigate("orderNew") })
+            }
             composable("order/{id}") { entry ->
                 OrderDetailScreen(entry.arguments?.getString("id")!!.toLong(), onBack = { nav.popBackStack() })
             }
-            composable("products") { ProductsScreen() }
+            composable("orderNew") {
+                NewOrderScreen(
+                    onDone = { id -> nav.navigate("order/$id") { popUpTo("orders") } },
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable("products") {
+                ProductsScreen(
+                    onOpen = { nav.navigate("product/$it") },
+                    onCreate = { nav.navigate("product/0") },
+                    onReceive = { nav.navigate("receive") },
+                )
+            }
+            composable("product/{id}") { entry ->
+                ProductDetailScreen(entry.arguments?.getString("id")!!.toLong(), onBack = { nav.popBackStack() })
+            }
+            composable("receive") { ReceiveStockScreen(onBack = { nav.popBackStack() }) }
             composable("clients") { ClientsScreen(onOpen = { nav.navigate("client/$it") }) }
             composable("client/{id}") { entry ->
                 ClientDetailScreen(entry.arguments?.getString("id")!!.toLong(), onBack = { nav.popBackStack() })

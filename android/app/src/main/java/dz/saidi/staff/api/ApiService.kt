@@ -1,5 +1,6 @@
 package dz.saidi.staff.api
 
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
@@ -49,6 +50,40 @@ interface ApiService {
 
     @PATCH("api/v1/products/{id}")
     suspend fun quickUpdateProduct(@Path("id") id: Long, @Body body: QuickUpdateRequest): ProductResponse
+
+    @GET("api/v1/products/{id}")
+    suspend fun productFull(@Path("id") id: Long): ProductFullResponse
+
+    @POST("api/v1/products")
+    suspend fun createProduct(@Body body: ProductUpsertRequest): ProductFullResponse
+
+    @PUT("api/v1/products/{id}")
+    suspend fun updateProductFull(@Path("id") id: Long, @Body body: ProductUpsertRequest): ProductFullResponse
+
+    @Multipart
+    @POST("api/v1/products/{id}/images")
+    suspend fun uploadProductImage(@Path("id") id: Long, @Part image: MultipartBody.Part): ProductFullResponse
+
+    @DELETE("api/v1/products/{id}/images/{imageId}")
+    suspend fun deleteProductImage(@Path("id") id: Long, @Path("imageId") imageId: Long): ProductFullResponse
+
+    @POST("api/v1/products/{id}/images/{imageId}/main")
+    suspend fun setMainImage(@Path("id") id: Long, @Path("imageId") imageId: Long): ProductFullResponse
+
+    @POST("api/v1/orders")
+    suspend fun createOrder(@Body body: CreateOrderRequest): OrderResponse
+
+    @GET("api/v1/meta/categories")
+    suspend fun categories(): CategoriesResponse
+
+    @GET("api/v1/meta/wilayas")
+    suspend fun wilayas(): WilayasResponse
+
+    @GET("api/v1/meta/suppliers")
+    suspend fun suppliers(): SuppliersResponse
+
+    @POST("api/v1/receipts")
+    suspend fun createReceipt(@Body body: CreateReceiptRequest): ReceiptResponse
 
     @GET("api/v1/clients")
     suspend fun clients(

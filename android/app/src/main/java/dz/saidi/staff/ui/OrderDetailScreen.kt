@@ -86,7 +86,7 @@ fun OrderDetailScreen(id: Long, onBack: () -> Unit) {
                             Text(o.customerName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Text("${o.wilaya ?: "—"} · ${o.commune ?: ""}", fontSize = 13.sp)
                             o.address?.let { Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            Text(if (o.deliveryType == "desk") "🏢 Stop-desk" else "🏠 Domicile", fontSize = 13.sp)
+                            Text(if (o.deliveryType == "stopdesk") "🏢 Stop-desk" else "🏠 Domicile", fontSize = 13.sp)
                             o.notes?.takeIf { it.isNotBlank() }?.let { Text("📝 $it", fontSize = 13.sp) }
                             o.client?.let { Text("Client compte: ${it.name} (${it.type})", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary) }
                             o.phone?.let { phone ->

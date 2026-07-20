@@ -135,6 +135,102 @@ data class NotificationItem(
     val body: String?, val read: Boolean, val at: String,
 )
 
+data class ProductImageInfo(
+    val id: Long, val url: String?, val thumb: String?,
+    @SerializedName("is_main") val isMain: Boolean,
+)
+data class VariantFull(
+    val id: Long, val label: String?, val color: String?,
+    @SerializedName("color_hex") val colorHex: String?,
+    val size: String?, val stock: Int,
+    @SerializedName("price_delta") val priceDelta: Double,
+)
+data class ProductFull(
+    val id: Long, val name: String,
+    @SerializedName("display_name") val displayName: String,
+    val sku: String?, val brand: String?, val category: String?,
+    val price: Double, val stock: Int,
+    @SerializedName("track_stock") val trackStock: Boolean,
+    @SerializedName("is_active") val isActive: Boolean,
+    val image: String?,
+    val description: String?, @SerializedName("short_desc") val shortDesc: String?,
+    @SerializedName("name_ar") val nameAr: String?,
+    @SerializedName("category_id") val categoryId: Long?,
+    @SerializedName("compare_at_price") val compareAtPrice: Double,
+    @SerializedName("wholesale_price") val wholesalePrice: Double,
+    @SerializedName("super_wholesale_price") val superWholesalePrice: Double,
+    @SerializedName("is_featured") val isFeatured: Boolean,
+    @SerializedName("is_new") val isNew: Boolean,
+    val images: List<ProductImageInfo>,
+    val variants: List<VariantFull>,
+)
+data class ProductFullResponse(val ok: Boolean?, val product: ProductFull)
+
+data class VariantUpsert(
+    val id: Long? = null, val color: String? = null,
+    @SerializedName("color_hex") val colorHex: String? = null,
+    val size: String? = null, val stock: Int? = null,
+    @SerializedName("price_delta") val priceDelta: Double? = null,
+)
+data class ProductUpsertRequest(
+    @SerializedName("name_fr") val nameFr: String,
+    @SerializedName("name_ar") val nameAr: String? = null,
+    @SerializedName("category_id") val categoryId: Long? = null,
+    val brand: String? = null, val sku: String? = null,
+    @SerializedName("short_desc_fr") val shortDescFr: String? = null,
+    @SerializedName("description_fr") val descriptionFr: String? = null,
+    val price: Double,
+    @SerializedName("compare_at_price") val compareAtPrice: Double? = null,
+    @SerializedName("wholesale_price") val wholesalePrice: Double? = null,
+    val stock: Int? = null,
+    @SerializedName("track_stock") val trackStock: Boolean? = null,
+    @SerializedName("is_active") val isActive: Boolean? = null,
+    val variants: List<VariantUpsert>? = null,
+)
+
+data class CategoryInfo(val id: Long, val name: String)
+data class CategoriesResponse(val categories: List<CategoryInfo>)
+data class WilayaInfo(
+    val id: Long, val label: String,
+    @SerializedName("home_fee") val homeFee: Double,
+    @SerializedName("stopdesk_fee") val stopdeskFee: Double,
+)
+data class WilayasResponse(val wilayas: List<WilayaInfo>)
+data class SupplierInfo(val id: Long, val name: String)
+data class SuppliersResponse(val suppliers: List<SupplierInfo>)
+
+data class OrderLineRequest(
+    @SerializedName("product_id") val productId: Long,
+    @SerializedName("variant_id") val variantId: Long? = null,
+    val qty: Int,
+    @SerializedName("unit_price") val unitPrice: Double? = null,
+)
+data class CreateOrderRequest(
+    @SerializedName("customer_name") val customerName: String,
+    val phone: String,
+    @SerializedName("wilaya_id") val wilayaId: Long,
+    val commune: String? = null, val address: String? = null,
+    @SerializedName("delivery_type") val deliveryType: String,
+    @SerializedName("client_id") val clientId: Long? = null,
+    val notes: String? = null, val status: String? = null,
+    val items: List<OrderLineRequest>,
+)
+
+data class ReceiptLineRequest(
+    @SerializedName("product_id") val productId: Long,
+    @SerializedName("variant_id") val variantId: Long? = null,
+    val qty: Int,
+    @SerializedName("unit_cost") val unitCost: Double? = null,
+)
+data class CreateReceiptRequest(
+    @SerializedName("supplier_id") val supplierId: Long? = null,
+    val note: String? = null,
+    @SerializedName("receive_now") val receiveNow: Boolean = true,
+    val items: List<ReceiptLineRequest>,
+)
+data class ReceiptInfo(val id: Long, val reference: String, val status: String)
+data class ReceiptResponse(val ok: Boolean?, val receipt: ReceiptInfo)
+
 data class StatusRequest(val status: String)
 data class DispatchRequest(val provider: String, val tracking: String?)
 data class RefundRequest(val amount: Double, val method: String, val reason: String?)
