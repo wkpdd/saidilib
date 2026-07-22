@@ -11,6 +11,8 @@
             ['En attente', $stats['orders_pending'], '⏳', 'amber'],
             ['Chiffre d\'affaires', Money::format($stats['revenue']), '💰', 'green'],
             ['Produits', $stats['products'], '📦', 'indigo'],
+            ['Visiteurs aujourd\'hui', $stats['visitors_today'] . ' (' . $stats['views_today'] . ' pages)', '👥', 'cyan'],
+            ['Visiteurs — 7 jours', $stats['visitors_week'], '📈', 'violet'],
         ];
     @endphp
     @foreach ($cards as [$label, $value, $icon, $color])

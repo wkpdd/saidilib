@@ -38,7 +38,7 @@ class DashboardController extends Controller
                 'products'       => Product::count(),
                 'low_stock'      => Product::where('track_stock', true)->where('stock', '<=', 3)->count(),
                 'unread_notifications' => AdminNotification::unread()->count(),
-            ],
+            ] + \App\Http\Controllers\Admin\DashboardController::visitorStats(),
             'status_counts' => Order::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
             'chart'         => $chart,
             'recent_orders' => Order::with('wilaya')->latest()->take(8)->get()
