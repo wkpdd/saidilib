@@ -115,6 +115,9 @@ class OrderController extends Controller
                 if ($l['product']->track_stock) {
                     $l['product']->decrement('stock', $l['qty']);
                 }
+                app(\App\Services\StockService::class)->sale(
+                    $l['product']->id, $l['variant']?->id, $l['qty'], $order->reference
+                );
             }
 
             return $order;

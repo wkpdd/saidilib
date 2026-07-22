@@ -48,6 +48,7 @@ class StockReceiptController extends Controller
         $receipt = StockReceipt::create([
             'reference'        => StockReceipt::generateReference(),
             'supplier_id'      => $data['supplier_id'] ?? null,
+            'stock_location_id' => $data['stock_location_id'] ?? null,
             'supplier_invoice' => $data['supplier_invoice'] ?? null,
             'document_date'    => $data['document_date'] ?? null,
             'note'             => $data['note'] ?? null,
@@ -89,6 +90,7 @@ class StockReceiptController extends Controller
 
         $receipt->update([
             'supplier_id'      => $data['supplier_id'] ?? null,
+            'stock_location_id' => $data['stock_location_id'] ?? null,
             'supplier_invoice' => $data['supplier_invoice'] ?? null,
             'document_date'    => $data['document_date'] ?? null,
             'note'             => $data['note'] ?? null,
@@ -146,6 +148,7 @@ class StockReceiptController extends Controller
     {
         return $request->validate([
             'supplier_id'          => 'nullable|exists:suppliers,id',
+            'stock_location_id'    => 'nullable|exists:stock_locations,id',
             'supplier_invoice'     => 'nullable|string|max:100',
             'document_date'        => 'nullable|date',
             'note'                 => 'nullable|string|max:1000',

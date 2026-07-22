@@ -27,6 +27,7 @@
                     ['admin.categories.index', '🗂️ Catégories', 'categories', $u->hasPermission('categories')],
                     ['admin.suppliers.index', '📥 Fournisseurs', 'suppliers', $u->hasPermission('purchasing')],
                     ['admin.receipts.index', '📦 Réceptions stock', 'receipts', $u->hasPermission('purchasing')],
+                    ['admin.stock.index', '🏬 Stock multi-emplacements', 'stock', $u->hasPermission('purchasing')],
                     ['admin.social.index', '📣 Réseaux sociaux', 'social', $u->hasPermission('social')],
                     ['admin.incidents.index', '🧯 Pertes & casses', 'incidents', $u->hasPermission('incidents')],
                     ['admin.pixels.index', '🎯 Pixels', 'pixels', $u->hasPermission('pixels')],

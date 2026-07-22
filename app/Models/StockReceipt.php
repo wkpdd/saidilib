@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class StockReceipt extends Model
 {
     protected $fillable = [
-        'reference', 'supplier_id', 'supplier_invoice', 'status', 'document_date',
+        'reference', 'supplier_id', 'stock_location_id', 'supplier_invoice', 'status', 'document_date',
         'received_at', 'total_cost', 'document_path', 'note', 'created_by',
     ];
 
@@ -78,11 +78,18 @@ class StockReceipt extends Model
         }
 
         DB::transaction(function () {
+            $stock = app(\App\Services\StockService::class);
             foreach ($this->items()->with('product', 'variant')->get() as $item) {
                 if ($item->product_variant_id && $item->variant) {
                     $item->variant->increment('stock', $item->quantity);
                 } elseif ($item->product_id && $item->product) {
                     $item->product->increment('stock', $item->quantity);
+                }
+                if ($item->product_id) {
+                    $stock->receive(
+                        $item->product_id, $item->product_variant_id, $item->quantity,
+                        $this->stock_location_id, $this->reference, $this->created_by
+                    );
                 }
             }
 

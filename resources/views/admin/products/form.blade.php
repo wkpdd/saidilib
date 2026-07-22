@@ -65,6 +65,14 @@
                                 #{{ $img->id }}
                                 <input type="checkbox" name="delete_images[]" value="{{ $img->id }}" title="Supprimer" class="rounded">
                             </span>
+                            @unless (\App\Models\Setting::isExternal($img->path))
+                                <span class="absolute right-1 top-1 flex gap-1">
+                                    <button type="button" title="Pivoter à gauche" data-rotate="left" data-url="{{ route('admin.products.images.rotate', [$product, $img]) }}"
+                                            class="rounded-lg bg-black/55 px-1.5 py-0.5 text-xs text-white hover:bg-black/75">↺</button>
+                                    <button type="button" title="Pivoter à droite" data-rotate="right" data-url="{{ route('admin.products.images.rotate', [$product, $img]) }}"
+                                            class="rounded-lg bg-black/55 px-1.5 py-0.5 text-xs text-white hover:bg-black/75">↻</button>
+                                </span>
+                            @endunless
                         </label>
                     @endforeach
                 </div>
@@ -96,6 +104,61 @@
                 <p class="mt-3 text-xs text-slate-400">💡 Enregistrez d'abord le produit pour utiliser la recherche d'images Google.</p>
             @endif
         </div>
+
+        @if ($product->exists)
+            {{-- Per-location stock breakdown --}}
+            <div class="card p-5">
+                <h2 class="mb-1 font-semibold">🏬 Stock par emplacement</h2>
+                @php
+                    $locs = \App\Models\StockLocation::orderBy('sort_order')->get();
+                    $plevels = \App\Models\StockLevel::where('product_id', $product->id)->whereNull('product_variant_id')->pluck('quantity', 'stock_location_id');
+                @endphp
+                <div class="flex flex-wrap gap-3 text-sm">
+                    @foreach ($locs as $loc)
+                        <span class="rounded-xl bg-slate-50 px-3 py-2">{{ $loc->name }}{{ $loc->is_default ? ' ⭐' : '' }} : <b>{{ $plevels[$loc->id] ?? 0 }}</b></span>
+                    @endforeach
+                    <a href="{{ route('admin.stock.index', ['q' => $product->sku ?: $product->name_fr]) }}" class="btn-ghost text-sm">↔️ Transférer / ajuster</a>
+                </div>
+                <p class="mt-2 text-xs text-slate-400">Les ventes sortent de l'emplacement par défaut ⭐. Le total vendable reste la somme des emplacements.</p>
+            </div>
+        @endif
+
+        @if ($product->exists)
+            {{-- Lots (traceability from stock receipts) --}}
+            @php $lots = \App\Services\LotAlerts::forProduct($product->id); @endphp
+            @if ($lots->isNotEmpty())
+                <div class="card p-5">
+                    <h2 class="mb-1 font-semibold">🏷️ Lots reçus (traçabilité)</h2>
+                    <p class="mb-3 text-xs text-slate-400">Issus des bons de réception. Alerte automatique quand une DLC approche (≤ {{ \App\Services\LotAlerts::WARN_DAYS }} jours).</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+                                    <th class="py-1.5 pr-3">Lot</th><th class="py-1.5 pr-3">Variante</th><th class="py-1.5 pr-3">Qté reçue</th>
+                                    <th class="py-1.5 pr-3">DLC</th><th class="py-1.5 pr-3">Bon</th><th class="py-1.5">Fournisseur</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($lots as $lot)
+                                    @php
+                                        $dlc = $lot->expiry_date;
+                                        $cls = ! $dlc ? '' : ($dlc->isPast() ? 'text-red-600 font-semibold' : ($dlc->lte(now()->addDays(30)) ? 'text-amber-600 font-semibold' : 'text-slate-600'));
+                                    @endphp
+                                    <tr class="border-b border-slate-50">
+                                        <td class="py-1.5 pr-3 font-medium">{{ $lot->lot_number ?: '—' }}</td>
+                                        <td class="py-1.5 pr-3">{{ $lot->variant?->label_fr ?: '—' }}</td>
+                                        <td class="py-1.5 pr-3">{{ $lot->quantity }}</td>
+                                        <td class="py-1.5 pr-3 {{ $cls }}">{{ $dlc ? $dlc->format('d/m/Y') . ($dlc->isPast() ? ' ⛔' : ($dlc->lte(now()->addDays(30)) ? ' ⏰' : '')) : '—' }}</td>
+                                        <td class="py-1.5 pr-3"><a href="{{ route('admin.receipts.show', $lot->receipt) }}" class="text-brand-700 hover:underline">{{ $lot->receipt->reference }}</a></td>
+                                        <td class="py-1.5">{{ $lot->receipt->supplier?->name ?: '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+        @endif
 
         {{-- Sizes / variants --}}
         <div class="card p-5">
@@ -254,6 +317,19 @@
         document.getElementById('variants').appendChild(row);
         vIndex++;
     }
+
+    // Rotate photo buttons: POST a standalone form (never submits the product form).
+    document.querySelectorAll('[data-rotate]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.action = btn.dataset.url;
+            f.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">' +
+                '<input type="hidden" name="dir" value="' + btn.dataset.rotate + '">';
+            document.body.appendChild(f);
+            f.submit();
+        });
+    });
 
     // Picking a colour swatch (even without typing a name) marks the row as a
     // "colour" variant, so the storefront picker shows it as a swatch — and

@@ -46,6 +46,7 @@ Route::prefix('v1')->group(function () {
             Route::post('products/{product}/images', [Api\ProductController::class, 'storeImage']);
             Route::delete('products/{product}/images/{image}', [Api\ProductController::class, 'deleteImage']);
             Route::post('products/{product}/images/{image}/main', [Api\ProductController::class, 'setMainImage']);
+            Route::post('products/{product}/images/{image}/rotate', [Api\ProductController::class, 'rotateImage']);
         });
 
         Route::middleware('perm:purchasing')->group(function () {

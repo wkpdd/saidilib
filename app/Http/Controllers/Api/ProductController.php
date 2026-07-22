@@ -109,6 +109,19 @@ class ProductController extends Controller
         return response()->json(['ok' => true, 'product' => self::full($product->fresh())]);
     }
 
+    public function rotateImage(Request $request, Product $product, ProductImage $image)
+    {
+        abort_unless($image->product_id === $product->id, 404);
+        $request->validate(['dir' => 'required|in:left,right']);
+
+        $ok = \App\Support\ImageEditor::rotate($product, $image, $request->input('dir') === 'right' ? 90 : -90);
+        if (! $ok) {
+            return response()->json(['ok' => false, 'message' => 'Rotation impossible (image externe ?).'], 422);
+        }
+
+        return response()->json(['ok' => true, 'product' => self::full($product->fresh())]);
+    }
+
     /** Exact-SKU lookup for the barcode scanner. */
     public function lookup(Request $request)
     {

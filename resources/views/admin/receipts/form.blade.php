@@ -53,6 +53,12 @@
                     <option value="{{ $s->id }}" @selected(old('supplier_id', $receipt->supplier_id)==$s->id)>{{ $s->name }}</option>
                 @endforeach
             </select>
+            <label class="label">Emplacement de réception</label>
+            <select name="stock_location_id" class="input mb-3">
+                @foreach (\App\Models\StockLocation::orderBy('sort_order')->get() as $loc)
+                    <option value="{{ $loc->id }}" @selected(old('stock_location_id', $receipt->stock_location_id ?? ($loc->is_default ? $loc->id : null))==$loc->id)>{{ $loc->name }}</option>
+                @endforeach
+            </select>
             <label class="label">N° facture fournisseur</label>
             <input name="supplier_invoice" value="{{ old('supplier_invoice', $receipt->supplier_invoice) }}" class="input mb-3">
             <label class="label">Date du document</label>

@@ -103,6 +103,10 @@ class CheckoutController extends Controller
                     if ($product->track_stock) {
                         $product->decrement('stock', $line['qty']);
                     }
+                    // Per-location mirror (default location), regardless of tracking.
+                    app(\App\Services\StockService::class)->sale(
+                        $product->id, $line['variant_id'], $line['qty'], $order->reference
+                    );
                 }
             }
 

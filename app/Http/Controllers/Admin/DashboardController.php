@@ -12,6 +12,9 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Opportunistic lot-expiry scan (throttled to 12h, silent on failure).
+        \App\Services\LotAlerts::scanIfDue();
+
         $stats = [
             'orders_total'   => Order::count(),
             'orders_pending' => Order::where('status', 'pending')->count(),

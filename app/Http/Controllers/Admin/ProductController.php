@@ -95,6 +95,17 @@ class ProductController extends Controller
             : response()->json(['found' => false]);
     }
 
+    /** Rotate a gallery photo 90° left/right (regenerates thumbnails). */
+    public function rotateImage(Request $request, Product $product, \App\Models\ProductImage $image)
+    {
+        abort_unless($image->product_id === $product->id, 404);
+        $request->validate(['dir' => 'required|in:left,right']);
+
+        $ok = \App\Support\ImageEditor::rotate($product, $image, $request->input('dir') === 'right' ? 90 : -90);
+
+        return back()->with($ok ? 'success' : 'error', $ok ? 'Photo pivotée.' : 'Impossible de pivoter cette photo (image externe ?).');
+    }
+
     // ---------------------------------------------------------------
 
     private function validateData(Request $request): array

@@ -80,6 +80,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('products/lookup', [Admin\ProductController::class, 'lookup'])->name('products.lookup');
         Route::get('products/image-search', [Admin\ProductImageSearchController::class, 'search'])->name('products.imagesearch.search');
         Route::post('products/{product}/image-search', [Admin\ProductImageSearchController::class, 'attach'])->name('products.imagesearch.attach');
+        Route::post('products/{product}/images/{image}/rotate', [Admin\ProductController::class, 'rotateImage'])->name('products.images.rotate');
         Route::resource('products', Admin\ProductController::class);
     });
     Route::middleware('perm:categories')->group(function () {
@@ -103,6 +104,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Suppliers & stock receiving (purchasing)
     Route::middleware('perm:purchasing')->group(function () {
+        Route::get('stock', [Admin\StockController::class, 'index'])->name('stock.index');
+        Route::post('stock/transfer', [Admin\StockController::class, 'transfer'])->name('stock.transfer');
+        Route::post('stock/adjust', [Admin\StockController::class, 'adjust'])->name('stock.adjust');
+        Route::post('stock/locations', [Admin\StockController::class, 'storeLocation'])->name('stock.locations.store');
+        Route::patch('stock/locations/{location}', [Admin\StockController::class, 'updateLocation'])->name('stock.locations.update');
+        Route::delete('stock/locations/{location}', [Admin\StockController::class, 'destroyLocation'])->name('stock.locations.destroy');
         Route::resource('suppliers', Admin\SupplierController::class)->except('show');
         Route::get('receipts/{receipt}/document', [Admin\StockReceiptController::class, 'document'])->name('receipts.document');
         Route::post('receipts/{receipt}/receive', [Admin\StockReceiptController::class, 'receive'])->name('receipts.receive');
