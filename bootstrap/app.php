@@ -5,7 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -35,3 +35,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
+// cPanel layout where the main domain is locked to ~/public_html: the app
+// lives in ~/saidiapp and the web root elsewhere. config_saidi.php sets
+// SAIDI_PUBLIC_PATH so Vite/asset/public_path() point at the real web root.
+// Absent in dev → no behaviour change.
+if (($saidiPublic = env('SAIDI_PUBLIC_PATH')) && is_dir($saidiPublic)) {
+    $app->usePublicPath($saidiPublic);
+}
+
+return $app;
