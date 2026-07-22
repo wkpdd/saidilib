@@ -107,4 +107,16 @@ return [
     'color'                 => 'Couleur',
     'choose_option'         => 'Veuillez choisir une option.',
     'variant_out_of_stock'  => 'Cette option est en rupture de stock.',
+
+    // School packs
+    'packs_title'       => 'Packs scolaires',
+    'packs_subtitle'    => 'La liste complète de fournitures, prête en un clic',
+    'packs_badge'       => 'Pack scolaire',
+    'pack_contains'     => 'Contenu du pack',
+    'add_pack_to_cart'  => 'Ajouter tout le pack au panier',
+    'pack_added'        => 'Le pack a été ajouté au panier ✅',
+    'pack_note'         => 'Tous les articles de la liste seront ajoutés à votre panier.',
+    'pack_promo'        => 'Prix pack',
+    'pack_view'         => 'Voir le pack',
+    'pack_items_count'  => 'articles',
 ];

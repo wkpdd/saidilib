@@ -107,4 +107,16 @@ return [
     'color'                 => 'اللون',
     'choose_option'         => 'الرجاء اختيار خيار.',
     'variant_out_of_stock'  => 'هذا الخيار غير متوفر حالياً.',
+
+    // School packs
+    'packs_title'       => 'الحزم المدرسية',
+    'packs_subtitle'    => 'قائمة الأدوات المدرسية كاملة، جاهزة بنقرة واحدة',
+    'packs_badge'       => 'حزمة مدرسية',
+    'pack_contains'     => 'محتوى الحزمة',
+    'add_pack_to_cart'  => 'أضف الحزمة كاملة إلى السلة',
+    'pack_added'        => 'تمت إضافة الحزمة إلى السلة ✅',
+    'pack_note'         => 'ستضاف كل أدوات القائمة إلى سلتك.',
+    'pack_promo'        => 'سعر الحزمة',
+    'pack_view'         => 'عرض الحزمة',
+    'pack_items_count'  => 'أداة',
 ];

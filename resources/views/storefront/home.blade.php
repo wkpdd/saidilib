@@ -38,6 +38,40 @@
     </div>
 </section>
 
+{{-- School packs (toggle: admin > Packs) --}}
+@php $homePacks = \App\Models\Pack::homeEnabled() ? \App\Models\Pack::active()->withCount('items')->orderBy('sort_order')->get() : collect(); @endphp
+@if ($homePacks->isNotEmpty())
+<section class="bg-brand-50/60">
+    <div class="container-x py-10">
+        <div class="mb-5 flex items-end justify-between">
+            <div>
+                <h2 class="font-display text-2xl font-bold">🎒 {{ __('shop.packs_title') }}</h2>
+                <p class="text-sm text-slate-500">{{ __('shop.packs_subtitle') }}</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach ($homePacks as $hp)
+                <a href="{{ route('pack.show', $hp->slug) }}" class="group card overflow-hidden transition hover:-translate-y-1 hover:shadow-card">
+                    @if ($hp->image_url)
+                        <img src="{{ $hp->image_url }}" alt="{{ $hp->name }}" loading="lazy" class="aspect-video w-full bg-slate-100 object-cover transition duration-500 group-hover:scale-105">
+                    @else
+                        <div class="grid aspect-video w-full place-items-center bg-brand-100 text-5xl">🎒</div>
+                    @endif
+                    <div class="p-4">
+                        <h3 class="font-semibold">{{ $hp->name }}</h3>
+                        <p class="mt-0.5 text-xs text-slate-500">{{ $hp->items_count }} {{ __('shop.pack_items_count') }}</p>
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="font-bold text-brand-700">@money($hp->effective_price)</span>
+                            <span class="btn-primary px-3 py-1.5 text-xs">{{ __('shop.pack_view') }}</span>
+                        </div>
+                    </div>
+                </a>
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
+
 {{-- Trust strip --}}
 <section class="border-b border-slate-100 bg-white">
     <div class="container-x grid grid-cols-2 gap-4 py-6 text-center sm:grid-cols-4">

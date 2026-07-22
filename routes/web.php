@@ -33,6 +33,9 @@ Route::get('/commande/frais', [CheckoutController::class, 'fee'])->name('checkou
 Route::post('/commande', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/commande/confirmee/{reference}', [CheckoutController::class, 'success'])->name('checkout.success');
 
+Route::get('/pack/{slug}', [\App\Http\Controllers\PackController::class, 'show'])->name('pack.show');
+Route::post('/pack/{slug}/ajouter', [\App\Http\Controllers\PackController::class, 'addToCart'])->name('pack.add');
+
 Route::get('/langue/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 // ---------------------------------------------------------------------------
@@ -81,6 +84,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('products/image-search', [Admin\ProductImageSearchController::class, 'search'])->name('products.imagesearch.search');
         Route::post('products/{product}/image-search', [Admin\ProductImageSearchController::class, 'attach'])->name('products.imagesearch.attach');
         Route::post('products/{product}/images/{image}/rotate', [Admin\ProductController::class, 'rotateImage'])->name('products.images.rotate');
+        Route::post('packs/toggle', [Admin\PackController::class, 'toggle'])->name('packs.toggle');
+        Route::resource('packs', Admin\PackController::class)->except('show');
         Route::resource('products', Admin\ProductController::class);
     });
     Route::middleware('perm:categories')->group(function () {

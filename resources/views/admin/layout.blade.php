@@ -24,6 +24,7 @@
                     ['admin.orders.index', '🧾 Commandes', 'orders', $u->hasPermission('orders')],
                     ['admin.clients.index', '💳 Clients', 'clients', $u->hasPermission('clients')],
                     ['admin.products.index', '📦 Produits', 'products', $u->hasPermission('products')],
+                    ['admin.packs.index', '🎒 Packs scolaires', 'packs', $u->hasPermission('products')],
                     ['admin.categories.index', '🗂️ Catégories', 'categories', $u->hasPermission('categories')],
                     ['admin.suppliers.index', '📥 Fournisseurs', 'suppliers', $u->hasPermission('purchasing')],
                     ['admin.receipts.index', '📦 Réceptions stock', 'receipts', $u->hasPermission('purchasing')],
