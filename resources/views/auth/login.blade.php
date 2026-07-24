@@ -28,7 +28,10 @@
             </label>
             <button class="btn-primary w-full">Se connecter</button>
         </form>
-        <p class="mt-4 text-center text-xs text-brand-100">admin@saidi-papetrie.dz / password</p>
+        <p class="mt-4 text-center text-xs text-brand-100/70">
+            {{ \App\Models\Setting::get('store_name', 'Saidi Papetrie') }} — développé par
+            <a href="https://h47.io" target="_blank" rel="noopener" class="underline hover:text-white">h47.io</a>
+        </p>
     </div>
 </body>
 </html>
