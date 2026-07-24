@@ -47,7 +47,12 @@
     <div class="border-t border-white/10">
         <div class="container-x flex flex-col items-center justify-between gap-2 py-4 text-xs text-slate-500 sm:flex-row">
             <span>© {{ date('Y') }} {{ Setting::get('store_name', 'Saidi Papetrie') }}. Tous droits réservés.</span>
-            <span>Paiement à la livraison · Livraison 58 wilayas</span>
+            <span>{{ __('shop.cod') }} · 58 wilayas</span>
+            <span>
+                {{ __('shop.developed_by') }}
+                <a href="https://h47.io" target="_blank" rel="noopener"
+                   class="font-semibold text-slate-400 underline-offset-2 hover:text-white hover:underline">h47.io</a>
+            </span>
         </div>
     </div>
 </footer>

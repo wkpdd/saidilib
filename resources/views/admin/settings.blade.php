@@ -89,6 +89,13 @@
         <label class="label mt-3">Telegram — Canal (chat_id ou @canal)</label>
         <input name="telegram_channel_id" value="{{ $v('telegram_channel_id') }}" class="input" placeholder="@saidipapetrie ou -1001234567890">
         <input type="hidden" name="fb_graph_version" value="{{ $v('fb_graph_version', 'v19.0') }}">
+
+        <label class="label mt-3">Signature ajoutée à la fin de chaque publication</label>
+        <textarea name="social_footer" rows="3" class="input font-mono text-xs"
+                  placeholder="Laissez vide pour la signature par défaut">{{ $v('social_footer') }}</textarea>
+        <p class="mt-1 whitespace-pre-line text-xs text-slate-400">Par défaut :
+{{ app(\App\Services\SocialPublisher::class)->footer() }}</p>
+
         <p class="mt-2 text-xs text-slate-400">La publication utilise l'API Graph (Facebook/Instagram) et le bot Telegram configuré ci-dessus.</p>
     </div>
 

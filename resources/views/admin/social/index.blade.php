@@ -35,6 +35,29 @@
             @endforeach
             <button class="btn-primary ms-auto">📣 Publier la sélection</button>
         </div>
+
+        {{-- Telegram: one post per product, or a single grouped album --}}
+        @if (in_array('telegram', $available))
+            <div class="mt-4 rounded-xl bg-slate-50 p-3">
+                <p class="mb-2 text-sm font-semibold">✈️ Mode Telegram</p>
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="telegram_mode" value="single" checked class="border-slate-300">
+                        Un post par produit
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="radio" name="telegram_mode" value="album" class="border-slate-300">
+                        Un seul post groupé (album)
+                    </label>
+                    <input name="telegram_intro" maxlength="200" class="input h-9 flex-1 text-sm"
+                           placeholder="Titre du post groupé — ex. « Rentrée scolaire 2026 » (optionnel)">
+                </div>
+                <p class="mt-2 text-[11px] text-slate-400">
+                    L'album regroupe jusqu'à 10 photos par post (au-delà, plusieurs albums se suivent) avec la liste
+                    des prix en légende — une seule notification pour vos abonnés. Les produits sans photo sont ignorés.
+                </p>
+            </div>
+        @endif
     </div>
 
     {{-- Product grid with checkboxes --}}
