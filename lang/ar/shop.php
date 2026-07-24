@@ -99,9 +99,20 @@ return [
     'copy_link'        => 'نسخ الرابط',
 
     // Quick add / wholesale
-    'add'             => 'أضف',
-    'choose_options'  => 'اختر الخيارات',
-    'wholesale'       => 'جملة',
+    'add'              => 'أضف',
+    'choose_options'   => 'اختر الخيارات',
+    'wholesale'        => 'جملة',
+    'wholesale_notice' => '💼 الأسعار تتغيّر بالجملة — كلّما اشتريت أكثر، كان السعر أفضل. اتصل بنا للحصول على سعر الجملة.',
+
+    // Quantity breaks
+    'qty_discount_title' => 'أسعار تنازلية حسب الكمية',
+    'qty_from'           => 'ابتداءً من :n',
+    'qty_next_tier'      => 'أضف :n قطعة أخرى للحصول على تخفيض :percent%',
+    'qty_savings'        => 'تخفيض الكمية',
+
+    // Credits
+    'developed_by'  => 'تطوير',
+    'secure_order'  => 'طلب آمن',
 
     // Variants
     'color'                 => 'اللون',

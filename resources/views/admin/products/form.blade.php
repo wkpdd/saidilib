@@ -225,6 +225,37 @@
             <label class="flex items-center gap-2 text-sm"><input type="hidden" name="track_stock" value="0"><input type="checkbox" name="track_stock" value="1" @checked(old('track_stock', $product->track_stock)) class="rounded"> Gérer le stock</label>
         </div>
 
+        {{-- Quantity breaks: "à partir de N articles, -X %" --}}
+        @php
+            $tierRows = old('qty_tiers', $product->exists
+                ? $product->quantityTiers->map(fn ($t) => [
+                    'min_qty'          => (int) $t->min_qty,
+                    'discount_percent' => rtrim(rtrim(number_format((float) $t->discount_percent, 2, '.', ''), '0'), '.'),
+                ])->values()->all()
+                : []);
+        @endphp
+        <div class="card p-5">
+            <h2 class="mb-1 font-semibold">📉 Remises quantité</h2>
+            <p class="mb-3 text-[11px] leading-relaxed text-slate-400">
+                Remise automatique appliquée aux clients au tarif détail quand ils commandent
+                au moins la quantité indiquée. Les grossistes gardent leur tarif négocié
+                (pas de cumul). Laissez vide pour ne rien proposer.
+            </p>
+            <div id="qtyTiers" class="space-y-2">
+                @foreach ($tierRows as $i => $t)
+                    <div class="grid grid-cols-[1fr_1fr_auto] items-center gap-2" data-tier-row>
+                        <input name="qty_tiers[{{ $i }}][min_qty]" type="number" min="2" value="{{ $t['min_qty'] ?? '' }}" placeholder="10" class="input" title="À partir de … articles">
+                        <input name="qty_tiers[{{ $i }}][discount_percent]" type="number" step="any" min="0" max="90" value="{{ $t['discount_percent'] ?? '' }}" placeholder="5" class="input" title="Remise en %">
+                        <button type="button" class="px-1 text-red-500" onclick="this.closest('[data-tier-row]').remove()">✕</button>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2 text-[11px] text-slate-400">
+                <span>à partir de (articles)</span><span>remise %</span><span></span>
+            </div>
+            <button type="button" id="addTier" class="btn-ghost mt-3 w-full text-sm">+ Ajouter un palier</button>
+        </div>
+
         <div class="card p-5">
             <h2 class="mb-4 font-semibold">Organisation</h2>
             <label class="label">Catégorie</label>
@@ -292,6 +323,21 @@
 
 @push('scripts')
 <script>
+    // Quantity-break rows
+    let tIndex = {{ count($tierRows) }};
+    document.getElementById('addTier')?.addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-[1fr_1fr_auto] items-center gap-2';
+        row.setAttribute('data-tier-row', '');
+        row.innerHTML = `
+            <input name="qty_tiers[${tIndex}][min_qty]" type="number" min="2" placeholder="10" class="input">
+            <input name="qty_tiers[${tIndex}][discount_percent]" type="number" step="any" min="0" max="90" placeholder="5" class="input">
+            <button type="button" class="px-1 text-red-500">✕</button>`;
+        row.querySelector('button').addEventListener('click', () => row.remove());
+        document.getElementById('qtyTiers').appendChild(row);
+        tIndex++;
+    });
+
     let vIndex = {{ count(old('variants', $product->variants->toArray() ?: [])) }};
     const imgOptions = @json($imgOpts->map(fn ($im, $k) => ['id' => $im->id, 'label' => 'Photo ' . ($k + 1)])->values());
     function imgOptionsHtml() {

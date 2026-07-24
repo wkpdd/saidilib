@@ -25,8 +25,9 @@ class CheckoutController extends Controller
         $wilayas = Wilaya::active()->orderBy('code')->get();
 
         return view('storefront.checkout', [
-            'items'    => $this->cart->items(),
+            'items'    => $this->cart->lines(),
             'subtotal' => $this->cart->subtotal(),
+            'savings'  => $this->cart->quantitySavings(),
             'wilayas'  => $wilayas,
         ]);
     }
@@ -60,9 +61,13 @@ class CheckoutController extends Controller
 
         $wilaya = Wilaya::findOrFail($data['wilaya_id']);
         $deliveryFee = $wilaya->feeFor($data['delivery_type']);
-        $subtotal = $this->cart->subtotal();
 
-        $order = DB::transaction(function () use ($data, $wilaya, $deliveryFee, $subtotal, $request) {
+        // Resolve quantity breaks ONCE, then bill exactly what we resolved —
+        // recomputing inside the loop could drift from the displayed subtotal.
+        $lines = $this->cart->lines();
+        $subtotal = array_sum(array_column($lines, 'line_total'));
+
+        $order = DB::transaction(function () use ($data, $wilaya, $deliveryFee, $subtotal, $lines, $request) {
             $order = Order::create([
                 'reference'     => Order::generateReference(),
                 'client_id'     => Auth::guard('client')->id(),
@@ -86,7 +91,7 @@ class CheckoutController extends Controller
                 'user_agent'    => substr((string) $request->userAgent(), 0, 500),
             ]);
 
-            foreach ($this->cart->items() as $line) {
+            foreach ($lines as $line) {
                 OrderItem::create([
                     'order_id'           => $order->id,
                     'product_id'         => $line['product_id'],
@@ -96,7 +101,7 @@ class CheckoutController extends Controller
                     'image'              => $line['image'],
                     'unit_price'         => $line['price'],
                     'quantity'           => $line['qty'],
-                    'line_total'         => $line['price'] * $line['qty'],
+                    'line_total'         => $line['line_total'],
                 ]);
 
                 if ($product = Product::find($line['product_id'])) {

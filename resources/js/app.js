@@ -37,6 +37,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ── Quantity breaks: highlight the active tier + price for this qty ──
+    const tiersRoot = document.querySelector('[data-qty-tiers]');
+    const qtyInput = document.querySelector('[data-qty] input[name="qty"]');
+    if (tiersRoot && qtyInput) {
+        const tiers = JSON.parse(tiersRoot.dataset.qtyTiers || '[]');
+        const tierBase = parseFloat(tiersRoot.dataset.basePrice || '0');
+        const tierCurrency = tiersRoot.dataset.currency || '';
+        const hint = document.querySelector('[data-qty-hint]');
+        const fmt = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(n) + ' ' + tierCurrency;
+
+        const refresh = () => {
+            const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+            let pct = 0;
+            let activeMin = 0;
+            tiers.forEach((t) => {
+                if (qty >= t.min && t.pct > pct) { pct = t.pct; activeMin = t.min; }
+            });
+
+            tiersRoot.querySelectorAll('[data-tier-row]').forEach((row) => {
+                const on = parseInt(row.dataset.tierRow, 10) === activeMin;
+                row.classList.toggle('bg-brand-50', on);
+                row.classList.toggle('font-bold', on);
+            });
+
+            if (hint) {
+                hint.textContent = pct > 0
+                    ? `${qty} × ${fmt(tierBase * (1 - pct / 100))} (-${pct}%)`
+                    : '';
+            }
+        };
+
+        qtyInput.addEventListener('input', refresh);
+        document.querySelectorAll('[data-qty] button').forEach((b) =>
+            b.addEventListener('click', () => setTimeout(refresh, 0)));
+        refresh();
+    }
+
     // ── Variant picker: colour + size with live availability ────────────
     const vRoot = document.querySelector('[data-variants]');
     if (vRoot) {

@@ -106,11 +106,18 @@
             </div>
             <div class="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-sm">
                 <div class="flex justify-between"><span class="text-slate-500">{{ __('shop.subtotal') }}</span><span class="font-semibold" id="sumSub" data-sub="{{ $subtotal }}">@money($subtotal)</span></div>
+                @if (($savings ?? 0) > 0)
+                    <div class="flex justify-between"><span class="text-accent">💼 {{ __('shop.qty_savings') }}</span><span class="font-semibold text-accent">−@money($savings)</span></div>
+                @endif
                 <div class="flex justify-between"><span class="text-slate-500">{{ __('shop.delivery') }}</span><span class="font-semibold" id="sumFee">—</span></div>
                 <div class="flex justify-between border-t border-slate-100 pt-2 text-lg font-bold"><span>{{ __('shop.total') }}</span><span class="text-brand-700" id="sumTotal">@money($subtotal)</span></div>
             </div>
             <button type="submit" class="btn-accent mt-5 w-full">{{ __('shop.place_order') }}</button>
             <p class="mt-2 text-center text-xs text-slate-400">{{ __('shop.cod_only') }}</p>
+            <p class="mt-3 border-t border-slate-100 pt-3 text-center text-[11px] text-slate-400">
+                🔒 {{ __('shop.secure_order') }} · {{ __('shop.developed_by') }}
+                <a href="https://h47.io" target="_blank" rel="noopener" class="font-semibold underline-offset-2 hover:text-brand-700 hover:underline">h47.io</a>
+            </p>
         </div>
     </form>
 </div>

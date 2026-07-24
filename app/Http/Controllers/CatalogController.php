@@ -90,7 +90,7 @@ class CatalogController extends Controller
 
     public function show(string $slug, PixelService $pixels)
     {
-        $product = Product::active()->with(['images', 'variants.image', 'category', 'pixels'])
+        $product = Product::active()->with(['images', 'variants.image', 'category', 'pixels', 'quantityTiers'])
             ->where('slug', $slug)->firstOrFail();
 
         $product->increment('views');

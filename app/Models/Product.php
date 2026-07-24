@@ -46,6 +46,12 @@ class Product extends Model
         return $this->belongsToMany(Pixel::class);
     }
 
+    /** Quantity breaks, cheapest threshold first. */
+    public function quantityTiers(): HasMany
+    {
+        return $this->hasMany(ProductQuantityTier::class)->orderBy('min_qty');
+    }
+
     public function getNameAttribute(): string
     {
         return $this->tr('name') ?? '';
@@ -162,6 +168,69 @@ class Product extends Model
     public function getHasTierPriceAttribute(): bool
     {
         return $this->current_price < (float) $this->price;
+    }
+
+    /**
+     * Quantity-break discount (%) that applies to a line of $qty units.
+     *
+     * Retail only: wholesale clients already buy at a negotiated price, so the
+     * two never stack. Reads the loaded relation — eager-load `quantityTiers`
+     * when calling this in a loop.
+     */
+    public function quantityDiscountPercent(int $qty, ?string $clientType = null): float
+    {
+        if (in_array($clientType, ['wholesale', 'super_wholesale'], true)) {
+            return 0.0;
+        }
+
+        $best = 0.0;
+        foreach ($this->quantityTiers as $tier) {
+            if ($qty >= $tier->min_qty) {
+                $best = max($best, (float) $tier->discount_percent);
+            }
+        }
+
+        return $best;
+    }
+
+    /** Unit price actually charged for a line of $qty units. */
+    public function unitPriceFor(int $qty, ?string $clientType = null): float
+    {
+        $base = $this->priceForTier($clientType);
+        $percent = $this->quantityDiscountPercent($qty, $clientType);
+
+        return $percent > 0 ? round($base * (1 - $percent / 100), 2) : $base;
+    }
+
+    /**
+     * The next quantity break above $qty, for the "add N more for -X%" nudge.
+     * Null when the buyer is already on the best tier (or gets none at all).
+     */
+    public function nextQuantityTier(int $qty, ?string $clientType = null): ?array
+    {
+        if (in_array($clientType, ['wholesale', 'super_wholesale'], true)) {
+            return null;
+        }
+
+        $current = $this->quantityDiscountPercent($qty, $clientType);
+
+        foreach ($this->quantityTiers as $tier) {
+            if ($tier->min_qty > $qty && (float) $tier->discount_percent > $current) {
+                return [
+                    'min_qty'  => (int) $tier->min_qty,
+                    'percent'  => (float) $tier->discount_percent,
+                    'missing'  => (int) $tier->min_qty - $qty,
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /** True when this product advertises at least one quantity break. */
+    public function getHasQuantityTiersAttribute(): bool
+    {
+        return $this->quantityTiers->isNotEmpty();
     }
 
     public function getDiscountPercentAttribute(): int

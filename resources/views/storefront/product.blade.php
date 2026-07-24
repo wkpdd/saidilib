@@ -78,6 +78,42 @@
                 @endif
             </div>
 
+            @unless ($product->has_tier_price)
+                @if ($product->has_quantity_tiers)
+                    {{-- Real, product-specific quantity breaks. --}}
+                    <div class="mt-3 overflow-hidden rounded-xl ring-1 ring-brand-100"
+                         data-qty-tiers='@json($product->quantityTiers->map(fn ($t) => ["min" => (int) $t->min_qty, "pct" => (float) $t->discount_percent])->values())'
+                         data-base-price="{{ (float) $product->current_price }}"
+                         data-currency="{{ \App\Models\Setting::get('currency','DA') }}">
+                        <p class="bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-800">
+                            💼 {{ __('shop.qty_discount_title') }}
+                        </p>
+                        <table class="w-full text-xs">
+                            <tbody class="divide-y divide-slate-100">
+                                <tr data-tier-row="0" class="bg-white">
+                                    <td class="px-3 py-1.5 text-slate-600">{{ __('shop.qty_from', ['n' => 1]) }}</td>
+                                    <td class="px-3 py-1.5 text-slate-400">—</td>
+                                    <td class="px-3 py-1.5 text-end font-semibold text-ink-900">@money($product->current_price)</td>
+                                </tr>
+                                @foreach ($product->quantityTiers as $tier)
+                                    <tr data-tier-row="{{ (int) $tier->min_qty }}" class="bg-white">
+                                        <td class="px-3 py-1.5 text-slate-600">{{ __('shop.qty_from', ['n' => (int) $tier->min_qty]) }}</td>
+                                        <td class="px-3 py-1.5 font-semibold text-accent">-{{ rtrim(rtrim(number_format((float) $tier->discount_percent, 2, ',', ''), '0'), ',') }}%</td>
+                                        <td class="px-3 py-1.5 text-end font-semibold text-ink-900">
+                                            @money($product->unitPriceFor((int) $tier->min_qty))
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-xs leading-relaxed text-brand-800 ring-1 ring-brand-100">
+                        {{ __('shop.wholesale_notice') }}
+                    </p>
+                @endif
+            @endunless
+
             @if ($product->short_desc)
                 <p class="mt-4 text-sm leading-relaxed text-ink-700">{{ $product->short_desc }}</p>
             @endif
@@ -148,6 +184,9 @@
                         <input type="number" name="qty" value="1" min="1" class="h-10 w-14 border-0 text-center focus:ring-0">
                         <button type="button" data-inc class="grid h-10 w-10 place-items-center text-lg hover:bg-slate-50">+</button>
                     </div>
+                    @if ($product->has_quantity_tiers && ! $product->has_tier_price)
+                        <p data-qty-hint class="mt-2 text-xs text-slate-500"></p>
+                    @endif
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row">

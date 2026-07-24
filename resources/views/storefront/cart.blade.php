@@ -20,7 +20,21 @@
                         <div class="min-w-0 flex-1">
                             <a href="{{ route('product', $line['slug']) }}" class="font-semibold text-ink-900 hover:text-brand-700">{{ $line['name'] }}</a>
                             @if ($line['variant'])<p class="text-xs text-slate-500">{{ $line['variant'] }}</p>@endif
-                            <p class="mt-1 text-sm font-bold text-brand-700">@money($line['price'])</p>
+                            <p class="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-brand-700">
+                                @money($line['price'])
+                                @if (($line['discount_percent'] ?? 0) > 0)
+                                    <span class="text-xs font-normal text-slate-400 line-through">@money($line['base_price'])</span>
+                                    <span class="badge bg-accent text-white">-{{ rtrim(rtrim(number_format($line['discount_percent'], 2, ',', ''), '0'), ',') }}%</span>
+                                @endif
+                            </p>
+                            @if (! empty($line['next_tier']))
+                                <p class="mt-1 text-xs text-brand-700">
+                                    ⬆️ {{ __('shop.qty_next_tier', [
+                                        'n'       => $line['next_tier']['missing'],
+                                        'percent' => rtrim(rtrim(number_format($line['next_tier']['percent'], 2, ',', ''), '0'), ','),
+                                    ]) }}
+                                </p>
+                            @endif
                         </div>
                         <form action="{{ route('cart.update') }}" method="post" class="flex items-center">
                             @csrf @method('PATCH')
@@ -28,7 +42,7 @@
                             <input type="number" name="qty" value="{{ $line['qty'] }}" min="0"
                                    onchange="this.form.submit()" class="input w-16 text-center">
                         </form>
-                        <div class="hidden w-24 text-end font-bold sm:block">@money($line['price'] * $line['qty'])</div>
+                        <div class="hidden w-24 text-end font-bold sm:block">@money($line['line_total'])</div>
                         <form action="{{ route('cart.remove') }}" method="post">
                             @csrf @method('DELETE')
                             <input type="hidden" name="key" value="{{ $key }}">
@@ -45,6 +59,12 @@
                     <span class="text-slate-500">{{ __('shop.subtotal') }}</span>
                     <span class="font-semibold">@money($subtotal)</span>
                 </div>
+                @if (($savings ?? 0) > 0)
+                    <div class="flex justify-between py-1.5 text-sm">
+                        <span class="text-accent">💼 {{ __('shop.qty_savings') }}</span>
+                        <span class="font-semibold text-accent">−@money($savings)</span>
+                    </div>
+                @endif
                 <div class="flex justify-between py-1.5 text-sm">
                     <span class="text-slate-500">{{ __('shop.delivery') }}</span>
                     <span class="text-slate-400">{{ app()->getLocale()==='ar' ? 'يُحتسب عند الطلب' : 'Calculé à la commande' }}</span>

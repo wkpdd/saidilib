@@ -14,8 +14,9 @@ class CartController extends Controller
     public function index()
     {
         return view('storefront.cart', [
-            'items'    => $this->cart->items(),
+            'items'    => $this->cart->lines(),
             'subtotal' => $this->cart->subtotal(),
+            'savings'  => $this->cart->quantitySavings(),
         ]);
     }
 

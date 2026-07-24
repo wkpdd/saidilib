@@ -99,9 +99,20 @@ return [
     'copy_link'        => 'Copier le lien',
 
     // Quick add / wholesale
-    'add'             => 'Ajouter',
-    'choose_options'  => 'Choisir les options',
-    'wholesale'       => 'Grossiste',
+    'add'              => 'Ajouter',
+    'choose_options'   => 'Choisir les options',
+    'wholesale'        => 'Grossiste',
+    'wholesale_notice' => '💼 Prix dégressifs à la quantité — plus vous achetez, meilleur est le prix. Contactez-nous pour un tarif grossiste.',
+
+    // Quantity breaks
+    'qty_discount_title' => 'Prix dégressifs à la quantité',
+    'qty_from'           => 'À partir de :n',
+    'qty_next_tier'      => 'Encore :n article(s) pour obtenir -:percent%',
+    'qty_savings'        => 'Remise quantité',
+
+    // Credits
+    'developed_by'  => 'Développé par',
+    'secure_order'  => 'Commande sécurisée',
 
     // Variants
     'color'                 => 'Couleur',

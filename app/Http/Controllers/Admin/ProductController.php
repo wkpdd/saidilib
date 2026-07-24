@@ -39,6 +39,7 @@ class ProductController extends Controller
         $product = Product::create($data);
         $this->syncImages($request, $product);
         $this->syncVariants($request, $product);
+        $this->syncQuantityTiers($request, $product);
         $product->pixels()->sync($request->input('pixels', []));
 
         return redirect()->route('admin.products.edit', $product)->with('success', 'Produit créé.');
@@ -46,7 +47,7 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('images', 'variants');
+        $product->load('images', 'variants', 'quantityTiers');
 
         return view('admin.products.form', [
             'product'    => $product,
@@ -65,6 +66,7 @@ class ProductController extends Controller
         $product->update($data);
         $this->syncImages($request, $product);
         $this->syncVariants($request, $product);
+        $this->syncQuantityTiers($request, $product);
         $product->pixels()->sync($request->input('pixels', []));
 
         return back()->with('success', 'Produit mis à jour.');
@@ -186,6 +188,39 @@ class ProductController extends Controller
         $first = $product->images()->orderBy('sort_order')->first();
         if ($first && ! $product->main_image) {
             $product->update(['main_image' => $first->path]);
+        }
+    }
+
+    /**
+     * Replace the product's quantity breaks with what the form submitted.
+     * Blank rows are dropped, duplicate thresholds collapse to the best
+     * discount, and anything out of range is ignored rather than rejected —
+     * the admin should never lose a whole product edit over a stray tier row.
+     */
+    private function syncQuantityTiers(Request $request, Product $product): void
+    {
+        $tiers = [];
+
+        foreach ((array) $request->input('qty_tiers', []) as $row) {
+            $minQty  = (int) ($row['min_qty'] ?? 0);
+            $percent = (float) str_replace(',', '.', (string) ($row['discount_percent'] ?? ''));
+
+            if ($minQty < 2 || $percent <= 0 || $percent > 90) {
+                continue;
+            }
+
+            // Same threshold twice → keep the bigger discount.
+            $tiers[$minQty] = max($tiers[$minQty] ?? 0, round($percent, 2));
+        }
+
+        ksort($tiers);
+
+        $product->quantityTiers()->delete();
+        foreach ($tiers as $minQty => $percent) {
+            $product->quantityTiers()->create([
+                'min_qty'          => $minQty,
+                'discount_percent' => $percent,
+            ]);
         }
     }
 
