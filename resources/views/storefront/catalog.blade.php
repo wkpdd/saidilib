@@ -10,8 +10,8 @@
     </nav>
 
     <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
-        {{-- Sidebar filters --}}
-        <aside class="space-y-5">
+        {{-- Sidebar filters (mobile gets the same panel in a drawer) --}}
+        <aside class="hidden space-y-5 lg:block">
             <div class="card p-5">
                 <h3 class="mb-3 font-semibold">{{ __('shop.categories') }}</h3>
                 <ul class="space-y-1 text-sm">
@@ -28,42 +28,23 @@
                 </ul>
             </div>
 
-            <form action="{{ url()->current() }}" method="get" class="card p-5">
-                @foreach (request()->except(['min','max','page']) as $k => $v)
-                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                @endforeach
-                <h3 class="mb-3 font-semibold">{{ __('shop.price') }} (DA)</h3>
-                <div class="flex items-center gap-2">
-                    <input type="number" name="min" value="{{ request('min') }}" placeholder="Min" class="input">
-                    <span class="text-slate-400">—</span>
-                    <input type="number" name="max" value="{{ request('max') }}" placeholder="Max" class="input">
-                </div>
-                <button class="btn-primary mt-3 w-full">{{ __('shop.filter') }}</button>
-            </form>
+            <div class="card p-5">
+                <h3 class="mb-3 font-semibold">{{ __('shop.filters') }}</h3>
+                @include('partials.product-filters', ['filter' => $filter])
+            </div>
         </aside>
 
         {{-- Results --}}
         <div>
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-slate-500">{{ $products->total() }} {{ __('shop.results') }}</p>
-                <form method="get" class="flex items-center gap-2 text-sm">
-                    @foreach (request()->except(['sort','page']) as $k => $v)
-                        <input type="hidden" name="{{ $k }}" value="{{ $v }}">
-                    @endforeach
-                    <label class="text-slate-500">{{ __('shop.sort') }}</label>
-                    <select name="sort" onchange="this.form.submit()" class="input w-auto py-1.5">
-                        <option value="featured" @selected(request('sort')==='featured')>{{ __('shop.sort_featured') }}</option>
-                        <option value="newest" @selected(request('sort')==='newest')>{{ __('shop.sort_newest') }}</option>
-                        <option value="price_asc" @selected(request('sort')==='price_asc')>{{ __('shop.sort_price_asc') }}</option>
-                        <option value="price_desc" @selected(request('sort')==='price_desc')>{{ __('shop.sort_price_desc') }}</option>
-                    </select>
-                </form>
-            </div>
+            @include('partials.product-filter-bar', ['filter' => $filter, 'products' => $products])
 
             @if ($products->isEmpty())
                 <div class="card grid place-items-center py-20 text-center">
                     <span class="text-5xl">🔍</span>
                     <p class="mt-3 text-slate-500">{{ __('shop.no_products') }}</p>
+                    @if ($filter->isActive())
+                        <a href="{{ $filter->resetUrl() }}" class="btn-ghost mt-4">{{ __('shop.filter_reset') }}</a>
+                    @endif
                 </div>
             @else
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">

@@ -17,13 +17,14 @@ class Product extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'price'            => 'decimal:2',
-        'compare_at_price' => 'decimal:2',
-        'is_active'        => 'boolean',
-        'is_featured'      => 'boolean',
-        'is_new'           => 'boolean',
-        'free_shipping'    => 'boolean',
-        'track_stock'      => 'boolean',
+        'price'               => 'decimal:2',
+        'compare_at_price'    => 'decimal:2',
+        'is_active'           => 'boolean',
+        'is_featured'         => 'boolean',
+        'is_new'              => 'boolean',
+        'free_shipping'       => 'boolean',
+        'free_shipping_until' => 'date',
+        'track_stock'         => 'boolean',
     ];
 
     public function category(): BelongsTo
@@ -240,6 +241,33 @@ class Product extends Model
         }
 
         return (int) round((1 - ($this->price / $this->compare_at_price)) * 100);
+    }
+
+    /**
+     * Free-delivery campaign running right now for this product.
+     * No end date = runs until the admin switches it off; with one, the offer
+     * stays valid for the whole of that day.
+     */
+    public function getHasFreeShippingAttribute(): bool
+    {
+        return (bool) $this->free_shipping
+            && (! $this->free_shipping_until || ! $this->free_shipping_until->endOfDay()->isPast());
+    }
+
+    /**
+     * Units we can actually ship for a line, or null when stock isn't tracked
+     * (untracked products never come up short). A variant is capped by its own
+     * stock, since that's what the storefront advertises for it.
+     */
+    public function availableFor(?ProductVariant $variant = null): ?int
+    {
+        if (! $this->track_stock) {
+            return null;
+        }
+
+        return ($variant && $variant->stock !== null)
+            ? min((int) $this->stock, (int) $variant->stock)
+            : (int) $this->stock;
     }
 
     public function getInStockAttribute(): bool

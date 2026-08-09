@@ -6,7 +6,7 @@
     </div>
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         @foreach ($products as $product)
-            <x-product-card :product="$product" />
+            <x-product-card :product="$product" :section="$section ?? $title" />
         @endforeach
     </div>
 </section>

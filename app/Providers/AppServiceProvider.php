@@ -17,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CartService::class, fn () => new CartService());
         $this->app->singleton(DeliveryManager::class, fn () => new DeliveryManager());
+
+        // Per-request tally of rendered product cards — scoped, never singleton,
+        // so ids restart at p{id} on every page.
+        $this->app->scoped(\App\Support\CardAnchors::class, fn () => new \App\Support\CardAnchors());
     }
 
     public function boot(): void

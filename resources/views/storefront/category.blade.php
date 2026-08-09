@@ -60,31 +60,34 @@
     @endif
 
     {{-- ── Files: products grid ─────────────────────────────────────────── --}}
-    <div class="mt-8">
-        <div class="mb-3 flex items-center justify-between">
-            <h2 class="flex items-center gap-2 font-display text-lg font-bold text-ink-900">
-                <span>📦</span> {{ __('shop.products') ?? 'Produits' }}
-                <span class="text-sm font-normal text-slate-400">({{ $products->total() }})</span>
-            </h2>
-            @if ($products->total() > 1)
-                <form method="get" class="text-sm">
-                    <select name="sort" onchange="this.form.submit()" class="input py-1.5 text-sm">
-                        <option value="">Tri : en vedette</option>
-                        <option value="newest" @selected(request('sort')==='newest')>Nouveautés</option>
-                        <option value="price_asc" @selected(request('sort')==='price_asc')>Prix croissant</option>
-                        <option value="price_desc" @selected(request('sort')==='price_desc')>Prix décroissant</option>
-                    </select>
-                </form>
-            @endif
-        </div>
+    <div class="mt-8 grid gap-6 lg:grid-cols-[260px_1fr]">
+        {{-- Filters, scoped to this folder --}}
+        <aside class="hidden lg:block">
+            <div class="card p-5">
+                <h3 class="mb-3 font-semibold">{{ __('shop.filters') }}</h3>
+                @include('partials.product-filters', ['filter' => $filter])
+            </div>
+        </aside>
+
+        <div>
+        <h2 class="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink-900">
+            <span>📦</span> {{ __('shop.products') ?? 'Produits' }}
+        </h2>
+
+        @include('partials.product-filter-bar', ['filter' => $filter, 'products' => $products])
 
         @if ($products->isNotEmpty())
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 @foreach ($products as $product)
                     <x-product-card :product="$product" />
                 @endforeach
             </div>
             <div class="mt-6">{{ $products->links() }}</div>
+        @elseif ($filter->isActive())
+            <div class="rounded-2xl bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                {{ __('shop.no_products') }}
+                <a href="{{ $filter->resetUrl() }}" class="font-semibold text-brand-700 hover:underline">{{ __('shop.filter_reset') }}</a>
+            </div>
         @elseif ($category->children->isNotEmpty())
             <div class="rounded-2xl bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
                 Ouvrez une sous-catégorie ci-dessus pour voir les produits. 📂
@@ -95,6 +98,7 @@
                 <a href="{{ route('catalog') }}" class="font-semibold text-brand-700 hover:underline">Voir toute la boutique →</a>
             </div>
         @endif
+        </div>
     </div>
 </div>
 @endsection

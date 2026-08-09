@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', $pack->name . ' — ' . \App\Models\Setting::get('store_name'))
-@section('meta_description', $pack->description)
+@section('meta_description', $pack->description ?: $pack->name)
 
 @section('content')
 <div class="container-x py-8">

@@ -170,11 +170,13 @@
 </section>
 @endif
 
-@include('partials.product-row', ['title' => __('shop.featured'), 'products' => $featured])
+{{-- `section` keeps card ids unique when a product sits in more than one row.
+     Fixed keys, not the translated titles, so the ids don't change with locale. --}}
+@include('partials.product-row', ['title' => __('shop.featured'), 'products' => $featured, 'section' => 'vedette'])
 @if ($onSale->isNotEmpty())
-    @include('partials.product-row', ['title' => __('shop.on_sale'), 'products' => $onSale])
+    @include('partials.product-row', ['title' => __('shop.on_sale'), 'products' => $onSale, 'section' => 'promo'])
 @endif
-@include('partials.product-row', ['title' => __('shop.new_arrivals'), 'products' => $newArrivals])
+@include('partials.product-row', ['title' => __('shop.new_arrivals'), 'products' => $newArrivals, 'section' => 'nouveautes'])
 
 {{-- CTA --}}
 <section class="container-x pb-12">

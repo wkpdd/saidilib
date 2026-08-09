@@ -46,7 +46,13 @@ class PackController extends Controller
             }
             $charged += $unit * $item->quantity;
 
-            $this->cart->add($item->product, $item->variant, $item->quantity, $unit);
+            // Tagged as a pack line: the discounted unit price is only valid
+            // as part of the whole pack (see CartService::update/remove).
+            $this->cart->add($item->product, $item->variant, $item->quantity, $unit, [
+                'id'   => $pack->id,
+                'name' => $pack->name,
+                'slug' => $pack->slug,
+            ]);
         }
 
         return redirect()->route('cart.index')->with('success', __('shop.pack_added'));

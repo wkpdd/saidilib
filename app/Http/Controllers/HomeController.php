@@ -9,6 +9,9 @@ class HomeController extends Controller
 {
     public function index()
     {
+        // The home page is a listing too — returning here must work like the catalogue.
+        \App\Support\ShopTrail::rememberListing(route('home'));
+
         $categories = Category::active()->whereNull('parent_id')
             ->withCount('products')->orderBy('sort_order')->get();
 

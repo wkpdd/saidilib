@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title', $product->display_name . ' — ' . \App\Models\Setting::get('store_name'))
-@section('meta_description', $product->short_desc)
+@section('meta_description', $product->short_desc ?: $product->display_name)
 
 @push('head')
     {{-- Open Graph / Twitter cards: make shared links render as rich posts --}}
@@ -20,14 +20,21 @@
 
 @section('content')
 <div class="container-x py-8">
-    <nav class="mb-5 text-sm text-slate-500">
-        <a href="{{ route('home') }}" class="hover:text-brand-700">{{ __('shop.home') }}</a>
-        <span class="mx-1">/</span>
-        @if ($product->category)
-            <a href="{{ route('category', $product->category->slug) }}" class="hover:text-brand-700">{{ $product->category->name }}</a>
+    <nav class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-500">
+        {{-- Straight back to the listing the shopper came from, at the same spot. --}}
+        <a href="{{ \App\Support\ShopTrail::resumeUrl() }}"
+           class="badge bg-white font-semibold text-brand-700 ring-1 ring-slate-200 hover:bg-brand-50">
+            {{ app()->getLocale() === 'ar' ? '→' : '←' }} {{ __('shop.back_to_products') }}
+        </a>
+        <span class="flex flex-wrap items-center">
+            <a href="{{ route('home') }}" class="hover:text-brand-700">{{ __('shop.home') }}</a>
             <span class="mx-1">/</span>
-        @endif
-        <span class="text-ink-900">{{ $product->display_name }}</span>
+            @if ($product->category)
+                <a href="{{ route('category', $product->category->slug) }}" class="hover:text-brand-700">{{ $product->category->name }}</a>
+                <span class="mx-1">/</span>
+            @endif
+            <span class="text-ink-900">{{ $product->display_name }}</span>
+        </span>
     </nav>
 
     <div class="grid gap-8 lg:grid-cols-2">
@@ -64,7 +71,16 @@
                 @else
                     <span class="badge bg-red-50 text-red-700">● {{ __('shop.out_of_stock') }}</span>
                 @endif
+                @if ($product->has_free_shipping)
+                    <span class="badge bg-green-600 text-white">🚚 {{ __('shop.free_shipping') }}</span>
+                @endif
             </div>
+
+            @if ($product->has_free_shipping && $product->free_shipping_until)
+                <p class="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+                    🚚 {{ __('shop.free_shipping_until', ['date' => $product->free_shipping_until->format('d/m/Y')]) }}
+                </p>
+            @endif
 
             <div class="mt-4 flex flex-wrap items-end gap-3">
                 <span data-price data-price="{{ (float) $product->current_price }}" data-currency="{{ \App\Models\Setting::get('currency','DA') }}"
@@ -118,7 +134,7 @@
                 <p class="mt-4 text-sm leading-relaxed text-ink-700">{{ $product->short_desc }}</p>
             @endif
 
-            <form id="buyForm" action="{{ route('cart.add') }}" method="post" class="mt-6 space-y-5">
+            <form id="buyForm" action="{{ route('cart.add') }}" method="post" data-cart-form class="mt-6 space-y-5">
                 @csrf
                 <input type="hidden" name="product_id" value="{{ $product->id }}">
 
@@ -129,11 +145,15 @@
                         // (never blank for a colour row), so match/dedupe on that.
                         $colors = $product->variants->filter(fn ($v) => $v->color_hex)->unique('color_hex')->values();
                         $sizes  = $product->variants->filter(fn ($v) => $v->size)->unique('size')->values();
+                        // Neither a colour nor a size (an admin row saved without
+                        // either): still offered by name, so the product can never
+                        // end up with variants nobody is able to choose.
+                        $others = $product->variants->filter(fn ($v) => ! $v->color_hex && ! $v->size)->values();
                         $variantData = $product->variants->map(fn ($v) => [
                             'id'    => $v->id,
                             'color' => $v->color_hex,
                             'size'  => $v->size,
-                            'stock' => (int) $v->stock,
+                            'stock' => $v->stock === null ? null : (int) $v->stock,
                             'delta' => (float) $v->price_delta,
                             'image' => $v->image?->hero_url,
                         ])->values();
@@ -171,6 +191,20 @@
                             </div>
                         @endif
 
+                        @if ($others->isNotEmpty())
+                            <div>
+                                <label class="label">{{ __('shop.choose_option') }}</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($others as $o)
+                                        <button type="button" data-variant="{{ $o->id }}"
+                                                class="badge border border-slate-200 px-4 py-2 text-sm font-semibold text-ink-700 transition">
+                                            {{ $o->label ?: $o->color ?: '—' }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
                         <p data-availability class="text-sm text-slate-500"></p>
                         <input type="hidden" name="variant_id" data-variant-input>
                     </div>
@@ -189,10 +223,11 @@
                     @endif
                 </div>
 
+                {{-- "Ajouter" stays on the page (fetch); "Commander maintenant" submits
+                     normally with buy_now=1 and goes straight to checkout. --}}
                 <div class="flex flex-col gap-3 sm:flex-row">
                     <button type="submit" class="btn-primary flex-1">🛒 {{ __('shop.add_to_cart') }}</button>
-                    <button type="submit" formaction="{{ route('cart.add') }}" class="btn-accent flex-1"
-                            onclick="this.form.querySelector('[name=buy_now]')?.remove()">⚡ {{ __('shop.buy_now') }}</button>
+                    <button type="submit" name="buy_now" value="1" class="btn-accent flex-1">⚡ {{ __('shop.buy_now') }}</button>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 pt-2 text-center text-xs text-slate-500">
@@ -220,7 +255,7 @@
             <h2 class="mb-5 font-display text-2xl font-bold">{{ __('shop.related') }}</h2>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 @foreach ($related as $product)
-                    <x-product-card :product="$product" />
+                    <x-product-card :product="$product" section="similaires" />
                 @endforeach
             </div>
         </div>
