@@ -1,9 +1,9 @@
 {
   "name": "Saidi Papetrie",
   "short_name": "Saidi",
-  "description": "Fournitures scolaires, bureautiques et informatiques — paiement à la livraison, partout en Algérie.",
-  "lang": "fr",
-  "dir": "ltr",
+  "description": "لوازم مدرسية ومكتبية ومعلوماتية — الدفع عند الاستلام، في كل ولايات الجزائر.",
+  "lang": "ar",
+  "dir": "rtl",
   "start_url": "/?src=pwa",
   "scope": "/",
   "display": "standalone",
@@ -17,8 +17,8 @@
     { "src": "/img/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Boutique", "url": "/boutique", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Mon panier", "url": "/panier" },
-    { "name": "Mon compte", "url": "/compte" }
+    { "name": "المتجر", "url": "/boutique", "icons": [{ "src": "/img/icon-192.png", "sizes": "192x192" }] },
+    { "name": "سلتي", "url": "/panier" },
+    { "name": "حسابي", "url": "/compte" }
   ]
 }
