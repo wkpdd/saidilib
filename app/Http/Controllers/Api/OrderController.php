@@ -101,6 +101,8 @@ class OrderController extends Controller
                 'utm_source'     => 'staff_app',
             ]);
 
+            $shortages = [];
+
             foreach ($lines as $l) {
                 $order->items()->create([
                     'product_id'         => $l['product']->id,
@@ -112,12 +114,23 @@ class OrderController extends Controller
                     'quantity'           => $l['qty'],
                     'line_total'         => $l['unit'] * $l['qty'],
                 ]);
-                if ($l['product']->track_stock) {
-                    $l['product']->decrement('stock', $l['qty']);
+                // Floors stock at 0 instead of blowing up on the unsigned column,
+                // and tells us how many units we came up short.
+                $available = $l['product']->availableFor($l['variant']);
+                $missing = app(\App\Services\StockService::class)
+                    ->sell($l['product'], $l['variant'], (int) $l['qty'], $order->reference);
+
+                if ($missing > 0) {
+                    $shortages[] = $l['product']->display_name
+                        . " — demandé {$l['qty']}, disponible " . (int) $available . ", manque {$missing}";
                 }
-                app(\App\Services\StockService::class)->sale(
-                    $l['product']->id, $l['variant']?->id, $l['qty'], $order->reference
-                );
+            }
+
+            if ($shortages) {
+                $order->update([
+                    'has_stock_issue' => true,
+                    'stock_issue'     => implode("\n", $shortages),
+                ]);
             }
 
             return $order;
@@ -130,6 +143,15 @@ class OrderController extends Controller
             route('admin.orders.show', $order),
             '🧾'
         );
+        if ($order->has_stock_issue) {
+            AdminNotification::raise(
+                'stock',
+                "⚠️ Stock insuffisant — commande {$order->reference}",
+                $order->stock_issue,
+                route('admin.orders.show', $order),
+                '⚠️'
+            );
+        }
         dispatch(function () use ($order) {
             app(\App\Services\TelegramNotifier::class)->orderCreated($order);
         })->afterResponse();
@@ -142,7 +164,23 @@ class OrderController extends Controller
         $request->validate(['status' => 'required|in:' . implode(',', Order::STATUSES)]);
         $order->update(['status' => $request->status]);
 
-        return response()->json(['ok' => true, 'order' => self::full($order->fresh())]);
+        // "Prête" from the staff app pushes to the carrier exactly like the
+        // web admin does, so both surfaces stay in sync.
+        $carrier = null;
+        if ($request->status === 'ready') {
+            $order->update(['ready_at' => now()]);
+
+            if (\App\Models\Setting::get('noest_auto_ready', '1') === '1') {
+                $result = app(\App\Services\Delivery\DeliveryManager::class)->sendReady($order->fresh());
+                $carrier = ['ok' => $result->success, 'message' => $result->message];
+            }
+        }
+
+        return response()->json(array_filter([
+            'ok'      => true,
+            'order'   => self::full($order->fresh()),
+            'carrier' => $carrier,
+        ], fn ($v) => $v !== null));
     }
 
     /** Same logic/logging as the web admin: edit line prices, recompute totals. */

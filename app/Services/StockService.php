@@ -79,6 +79,36 @@ class StockService
         $this->log($default->id, $productId, $variantId, -$qty, 'sale', $note);
     }
 
+    /**
+     * Sell $qty units of a line and report the shortage (0 when fully covered).
+     *
+     * `products.stock` is an UNSIGNED column, so a plain decrement past zero is
+     * a database error — i.e. the 500 a customer used to hit when ordering 50
+     * of something we hold 10 of. We floor the total at zero instead and hand
+     * the shortage back to the caller, which flags the order for follow-up.
+     *
+     * Variant stock is only read, never written: it stays an admin-managed
+     * figure here, exactly as before.
+     */
+    public function sell(Product $product, ?ProductVariant $variant, int $qty, ?string $note = null): int
+    {
+        if ($qty <= 0) {
+            return 0;
+        }
+
+        $available = $product->availableFor($variant);
+        $shortage = $available === null ? 0 : max(0, $qty - $available);
+
+        if ($product->track_stock) {
+            $product->update(['stock' => max(0, (int) $product->stock - $qty)]);
+        }
+
+        // Per-location mirror (already floors at 0), regardless of tracking.
+        $this->sale($product->id, $variant?->id, $qty, $note);
+
+        return $shortage;
+    }
+
     /** Manual set of one cell in the matrix (adjust reason, keeps totals in sync). */
     public function adjust(Product $product, ?ProductVariant $variant, int $locationId, int $newQty, ?int $userId = null): void
     {

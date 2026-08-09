@@ -30,6 +30,7 @@ Route::post('/panier/vider', [CartController::class, 'clear'])->name('cart.clear
 
 Route::get('/commande', [CheckoutController::class, 'index'])->name('checkout.index');
 Route::get('/commande/frais', [CheckoutController::class, 'fee'])->name('checkout.fee');
+Route::get('/commande/communes', [CheckoutController::class, 'communes'])->name('checkout.communes');
 Route::post('/commande', [CheckoutController::class, 'store'])->name('checkout.store');
 Route::get('/commande/confirmee/{reference}', [CheckoutController::class, 'success'])->name('checkout.success');
 

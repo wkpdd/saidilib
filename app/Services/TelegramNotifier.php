@@ -80,6 +80,18 @@ class TelegramNotifier
             'Total : <b>' . number_format((float) $order->total, 2, ',', ' ') . ' DA</b>',
         ];
 
-        return implode("\n", array_filter($lines));
+        // Ordered more than we hold: the order is in, but someone has to call
+        // the customer before it can be prepared.
+        if ($order->has_stock_issue) {
+            $lines[] = '';
+            $lines[] = '⚠️ <b>STOCK INSUFFISANT — à vérifier avec le client</b>';
+            foreach (preg_split('/\r\n|\r|\n/', (string) $order->stock_issue) as $row) {
+                if (trim($row) !== '') {
+                    $lines[] = '• ' . e(trim($row));
+                }
+            }
+        }
+
+        return implode("\n", $lines);
     }
 }

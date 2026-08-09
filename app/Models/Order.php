@@ -22,10 +22,21 @@ class Order extends Model
         'refunded_at'      => 'datetime',
         'provider_payload' => 'array',
         'dispatched_at'    => 'datetime',
+        'has_stock_issue'  => 'boolean',
+        'stock_issue_resolved_at' => 'datetime',
+        'ready_at'         => 'datetime',
+        'noest_activity'   => 'array',
+        'noest_checked_at' => 'datetime',
     ];
 
+    /** A shortage the admin still has to settle with the customer. */
+    public function getHasOpenStockIssueAttribute(): bool
+    {
+        return $this->has_stock_issue && is_null($this->stock_issue_resolved_at);
+    }
+
     public const STATUSES = [
-        'pending', 'confirmed', 'preparing', 'shipped',
+        'pending', 'confirmed', 'preparing', 'ready', 'shipped',
         'delivered', 'cancelled', 'returned',
     ];
 
@@ -66,10 +77,29 @@ class Order extends Model
         return ! is_null($this->refunded_at);
     }
 
+    /** Prepared by the team and waiting for the carrier. */
+    public function getIsReadyAttribute(): bool
+    {
+        return ! is_null($this->ready_at) || $this->status === 'ready';
+    }
+
+    /** Created AND validated at Noest — visible to their logistics. */
+    public function getIsCarrierValidatedAttribute(): bool
+    {
+        return (bool) ($this->provider_payload['validated'] ?? false);
+    }
+
+    /** Orders that can be pushed to / tracked with the Noest API. */
+    public function scopeNoest($query)
+    {
+        return $query->where('delivery_provider', 'noest')->whereNotNull('tracking_number');
+    }
+
     public const STATUS_LABELS = [
         'pending'   => 'En attente',
         'confirmed' => 'Confirmée',
         'preparing' => 'En préparation',
+        'ready'     => 'Prête à expédier',
         'shipped'   => 'Expédiée',
         'delivered' => 'Livrée',
         'cancelled' => 'Annulée',
@@ -87,6 +117,7 @@ class Order extends Model
             'pending'   => 'amber',
             'confirmed' => 'blue',
             'preparing' => 'indigo',
+            'ready'     => 'teal',
             'shipped'   => 'cyan',
             'delivered' => 'green',
             'cancelled' => 'red',

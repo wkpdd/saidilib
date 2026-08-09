@@ -65,8 +65,15 @@
                         </select>
                     </div>
                     <div>
-                        <label class="label">{{ __('shop.commune') }}</label>
-                        <input name="commune" value="{{ old('commune') }}" class="input">
+                        <label class="label">{{ __('shop.commune') }} <span id="communeReq">*</span></label>
+                        {{-- Two fields, one submitted: the select is used as soon as we
+                             have the carrier's list, the text input is the fallback
+                             (no JS, or carrier API unreachable). --}}
+                        <select name="commune" id="communeSelect" class="input hidden" disabled>
+                            <option value="">{{ __('shop.select_commune') }}</option>
+                        </select>
+                        <input name="commune" id="commune" value="{{ old('commune') }}" class="input"
+                               autocomplete="address-level2">
                     </div>
                     <div class="sm:col-span-2" id="addressWrap">
                         <label class="label">{{ __('shop.address') }}</label>
@@ -109,7 +116,13 @@
                 @if (($savings ?? 0) > 0)
                     <div class="flex justify-between"><span class="text-accent">💼 {{ __('shop.qty_savings') }}</span><span class="font-semibold text-accent">−@money($savings)</span></div>
                 @endif
-                <div class="flex justify-between"><span class="text-slate-500">{{ __('shop.delivery') }}</span><span class="font-semibold" id="sumFee">—</span></div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">{{ __('shop.delivery') }}</span>
+                    <span class="font-semibold {{ $freeShipping ? 'text-green-600' : '' }}" id="sumFee">{{ $freeShipping ? __('shop.free_shipping') : '—' }}</span>
+                </div>
+                @if ($freeShipping)
+                    <p class="rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700">🚚 {{ __('shop.free_shipping_applied') }}</p>
+                @endif
                 <div class="flex justify-between border-t border-slate-100 pt-2 text-lg font-bold"><span>{{ __('shop.total') }}</span><span class="text-brand-700" id="sumTotal">@money($subtotal)</span></div>
             </div>
             <button type="submit" class="btn-accent mt-5 w-full">{{ __('shop.place_order') }}</button>
@@ -131,23 +144,65 @@
     const feeEl = document.getElementById('sumFee');
     const totalEl = document.getElementById('sumTotal');
     const addressWrap = document.getElementById('addressWrap');
+    // Server-side truth: every product in the cart has a running free-delivery
+    // offer, so no wilaya fee applies whatever the customer picks.
+    const freeShipping = @json((bool) $freeShipping);
+    const freeLabel = @json(__('shop.free_shipping'));
 
     function deliveryType() {
         return document.querySelector('input[name=delivery_type]:checked').value;
     }
     function recalc() {
+        if (freeShipping) { feeEl.textContent = freeLabel; totalEl.textContent = fmt(sub); return; }
         const opt = wilaya.selectedOptions[0];
         if (!opt || !opt.value) { feeEl.textContent = '—'; totalEl.textContent = fmt(sub); return; }
         const fee = parseFloat(deliveryType() === 'stopdesk' ? opt.dataset.desk : opt.dataset.home) || 0;
         feeEl.textContent = fmt(fee);
         totalEl.textContent = fmt(sub + fee);
     }
-    wilaya.addEventListener('change', recalc);
+    // The communes the carrier serves in the chosen wilaya. One small request
+    // per wilaya change; if it fails the free-text field stays in place.
+    const communeSelect = document.getElementById('communeSelect');
+    const communeInput = document.getElementById('commune');
+    const communeReq = document.getElementById('communeReq');
+    const communeUrl = @json(route('checkout.communes'));
+    const communePlaceholder = communeSelect.options[0].textContent;
+
+    function useFreeText() {
+        communeSelect.classList.add('hidden');
+        communeSelect.disabled = true;              // disabled → not submitted
+        communeInput.classList.remove('hidden');
+        communeInput.disabled = false;
+    }
+
+    function useList(names) {
+        const chosen = communeInput.value.trim().toLowerCase();
+        communeSelect.innerHTML = '<option value="">' + communePlaceholder + '</option>'
+            + names.map((c) => '<option value="' + c.replace(/"/g, '&quot;') + '"'
+                + (c.toLowerCase() === chosen ? ' selected' : '') + '>' + c + '</option>').join('');
+        communeSelect.classList.remove('hidden');
+        communeSelect.disabled = false;
+        communeInput.classList.add('hidden');
+        communeInput.disabled = true;
+    }
+
+    function loadCommunes() {
+        if (!wilaya.value) { useFreeText(); return; }
+        fetch(communeUrl + '?wilaya_id=' + encodeURIComponent(wilaya.value), { headers: { Accept: 'application/json' } })
+            .then((r) => r.ok ? r.json() : { communes: [] })
+            .then((d) => (d.communes && d.communes.length) ? useList(d.communes) : useFreeText())
+            .catch(useFreeText);
+    }
+
+    wilaya.addEventListener('change', () => { recalc(); loadCommunes(); });
     document.querySelectorAll('input[name=delivery_type]').forEach(r => r.addEventListener('change', () => {
-        addressWrap.style.display = deliveryType() === 'stopdesk' ? 'none' : '';
+        const home = deliveryType() !== 'stopdesk';
+        addressWrap.style.display = home ? '' : 'none';
+        communeReq.style.display = home ? '' : 'none';   // stop desk: commune optional
         recalc();
     }));
     recalc();
+    loadCommunes();
 </script>
 @endpush
 @endsection

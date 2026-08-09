@@ -145,3 +145,11 @@ return [
     'pack_view'         => 'Voir le pack',
     'pack_items_count'  => 'articles',
 ];
+    'invalid_phone' => 'Numéro de téléphone invalide (ex. 0550 50 50 50).',
+    'unknown_commune' => "Cette commune n'est pas desservie — choisissez-en une dans la liste.",
+    'select_commune' => 'Choisissez votre commune',
+    'pack_locked' => "Les articles d'un pack se modifient ensemble : changez le nombre de packs.",
+    'pack_locked_hint' => "Ce pack se vend complet — la quantité se change pour tout le pack.",
+    'pack_qty' => "Packs",
+    'remove_pack' => "Retirer le pack",
+    'pack_removed' => "Pack retiré du panier.",
