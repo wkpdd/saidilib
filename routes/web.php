@@ -137,14 +137,25 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::middleware('perm:orders')->group(function () {
         Route::get('orders', [Admin\OrderController::class, 'index'])->name('orders.index');
+        // Fixed segments before {order}, otherwise "print"/"tracking" are captured as an id.
+        Route::get('orders/print', [Admin\OrderController::class, 'printSheets'])->name('orders.print');
+        Route::get('orders/tracking', [Admin\OrderController::class, 'tracking'])->name('orders.tracking');
+        Route::post('orders/tracking/refresh', [Admin\OrderController::class, 'refreshTrackingBatch'])->name('orders.tracking.refresh');
+        Route::post('orders/bulk-ready', [Admin\OrderController::class, 'bulkReady'])->name('orders.bulk.ready');
+        Route::post('orders/labels', [Admin\OrderController::class, 'noestLabelsZip'])->name('orders.labels');
         Route::get('orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
         Route::get('orders/{order}/slip', [Admin\OrderController::class, 'slip'])->name('orders.slip');
+        Route::get('orders/{order}/print', [Admin\OrderController::class, 'printSheets'])->name('orders.print.one');
         Route::get('orders/{order}/noest-label', [Admin\OrderController::class, 'noestLabel'])->name('orders.noest.label');
+        Route::post('orders/{order}/ready', [Admin\OrderController::class, 'markReady'])->name('orders.ready');
+        Route::post('orders/{order}/tracking', [Admin\OrderController::class, 'refreshTracking'])->name('orders.tracking.one');
+        Route::post('orders/{order}/noest-check', [Admin\OrderController::class, 'noestCheck'])->name('orders.noest.check');
         Route::patch('orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.status');
         Route::post('orders/{order}/prices', [Admin\OrderController::class, 'editPrices'])->name('orders.prices');
         Route::post('orders/{order}/dispatch', [Admin\OrderController::class, 'dispatch'])->name('orders.dispatch');
         Route::post('orders/{order}/validate', [Admin\OrderController::class, 'validateShipment'])->name('orders.validate');
         Route::post('orders/{order}/refund', [Admin\OrderController::class, 'refund'])->name('orders.refund');
+        Route::post('orders/{order}/stock-resolved', [Admin\OrderController::class, 'resolveStockIssue'])->name('orders.stock.resolve');
     });
 
     Route::middleware('perm:wilayas')->group(function () {
@@ -156,6 +167,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
         Route::patch('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
         Route::post('settings/telegram-test', [Admin\SettingController::class, 'telegramTest'])->name('settings.telegram.test');
+        Route::post('settings/noest-test', [Admin\SettingController::class, 'noestTest'])->name('settings.noest.test');
         // Reset stays restricted to full administrators (checked in the controller).
         Route::post('settings/reset-data', [Admin\SettingController::class, 'resetData'])->name('settings.reset');
     });

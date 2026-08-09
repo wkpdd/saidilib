@@ -5,6 +5,33 @@
 @section('content')
 <div class="grid gap-6 lg:grid-cols-3">
     <div class="space-y-6 lg:col-span-2">
+        {{-- Stock shortage: the order was accepted anyway, but someone has to
+             call the customer before it can be prepared. --}}
+        @if ($order->has_stock_issue)
+            <div class="card border-s-4 {{ $order->has_open_stock_issue ? 'border-red-500 bg-red-50/60' : 'border-green-500 bg-green-50/50' }} p-5">
+                <h2 class="font-semibold {{ $order->has_open_stock_issue ? 'text-red-700' : 'text-green-700' }}">
+                    {{ $order->has_open_stock_issue ? '⚠️ Stock insuffisant — à régler avec le client' : '✅ Stock insuffisant — réglé' }}
+                </h2>
+                <ul class="mt-2 list-disc space-y-1 ps-5 text-sm text-ink-700">
+                    @foreach (preg_split('/\r\n|\r|\n/', (string) $order->stock_issue) as $row)
+                        @if (trim($row) !== '')<li>{{ $row }}</li>@endif
+                    @endforeach
+                </ul>
+                @if ($order->has_open_stock_issue)
+                    <p class="mt-2 text-xs text-slate-500">
+                        La commande a bien été enregistrée. Contactez le client pour ajuster la quantité,
+                        proposer un délai ou annuler la ligne, puis marquez le problème comme réglé.
+                    </p>
+                    <form action="{{ route('admin.orders.stock.resolve', $order) }}" method="post" class="mt-3">
+                        @csrf
+                        <button class="btn-ghost text-sm">✅ Marquer comme réglé</button>
+                    </form>
+                @else
+                    <p class="mt-2 text-xs text-slate-500">Réglé le {{ $order->stock_issue_resolved_at->format('d/m/Y H:i') }}.</p>
+                @endif
+            </div>
+        @endif
+
         {{-- Items (prices editable before the deal is confirmed) --}}
         <div class="card overflow-hidden">
             <div class="flex items-center justify-between border-b border-slate-100 p-5">
@@ -95,9 +122,51 @@
 
     {{-- Actions --}}
     <div class="space-y-6">
-        {{-- Delivery slip --}}
-        <a href="{{ route('admin.orders.slip', $order) }}" target="_blank"
-           class="btn-primary w-full justify-center">🖨️ Bordereau de livraison (Noest)</a>
+        {{-- Printing --}}
+        <div class="grid gap-2">
+            <a href="{{ route('admin.orders.print.one', $order) }}" target="_blank"
+               class="btn-primary w-full justify-center">🖨️ Fiche de préparation (A4)</a>
+            <a href="{{ route('admin.orders.slip', $order) }}" target="_blank"
+               class="btn-ghost w-full justify-center">🧾 Bordereau de livraison</a>
+        </div>
+
+        {{-- Ready → carrier --}}
+        <div class="card p-5">
+            <h2 class="mb-1 font-semibold">Préparation</h2>
+            @if ($order->is_ready)
+                <div class="mb-3 rounded-xl bg-teal-50 p-3 text-sm text-teal-800">
+                    ✅ Prête depuis {{ $order->ready_at?->format('d/m/Y H:i') ?: 'aujourd\'hui' }}
+                    @if ($order->is_carrier_validated)<br><span class="badge bg-green-100 text-green-700">✓ validée chez Noest</span>@endif
+                </div>
+            @else
+                <p class="mb-3 text-xs text-slate-400">
+                    Quand l'équipe a fini de préparer le colis : un clic le crée <b>et</b> le valide chez Noest
+                    (leur logistique peut alors venir le récupérer).
+                </p>
+            @endif
+            <form action="{{ route('admin.orders.ready', $order) }}" method="post"
+                  onsubmit="return confirm('Marquer cette commande comme prête et l\'envoyer à Noest ?')">
+                @csrf
+                <button class="btn w-full bg-teal-600 text-white hover:bg-teal-700">
+                    ✅ {{ $order->is_ready ? 'Renvoyer à Noest' : 'Commande prête → Noest' }}
+                </button>
+            </form>
+
+            {{-- Dry run: no parcel is created, it only reports what Noest would say. --}}
+            <form action="{{ route('admin.orders.noest.check', $order) }}" method="post" class="mt-2">
+                @csrf
+                <button class="btn-ghost w-full justify-center text-sm">🔍 Vérifier les données Noest</button>
+            </form>
+
+            @if (session('noest_payload'))
+                <div class="mt-3 overflow-x-auto rounded-xl bg-slate-900 p-3 text-xs text-slate-100">
+                    <div class="mb-1 font-semibold text-slate-300">Données envoyées à Noest :</div>
+                    @foreach (session('noest_payload') as $k => $v)
+                        <div><span class="text-slate-400">{{ $k }}</span> : {{ is_scalar($v) ? $v : json_encode($v) }}</div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
 
         {{-- Status --}}
         <div class="card p-5">
@@ -131,7 +200,7 @@
                 {{-- Noest carrier actions --}}
                 @if ($order->delivery_provider === 'noest' && $order->tracking_number)
                     <div class="mb-3 flex flex-wrap gap-2">
-                        @if (! ($order->provider_payload['validated'] ?? false))
+                        @if (! $order->is_carrier_validated)
                             <form action="{{ route('admin.orders.validate', $order) }}" method="post"
                                   onsubmit="return confirm('Valider chez Noest ? La commande ne pourra plus être modifiée.')">
                                 @csrf
@@ -140,6 +209,37 @@
                         @endif
                         <a href="{{ route('admin.orders.noest.label', $order) }}" target="_blank"
                            class="btn-ghost">🏷️ Étiquette Noest (PDF)</a>
+                        <form action="{{ route('admin.orders.tracking.one', $order) }}" method="post">
+                            @csrf
+                            <button class="btn-ghost">🔄 Vérifier le suivi</button>
+                        </form>
+                    </div>
+
+                    {{-- Live Noest timeline (refreshed on demand) --}}
+                    <div class="rounded-xl bg-slate-50 p-3 text-sm">
+                        <div class="flex items-center justify-between">
+                            <b>Suivi Noest</b>
+                            <span class="text-xs text-slate-400">
+                                {{ $order->noest_checked_at ? 'vérifié ' . $order->noest_checked_at->diffForHumans() : 'jamais vérifié' }}
+                            </span>
+                        </div>
+                        @if ($order->noest_status)
+                            <p class="mt-1 font-medium text-cyan-800">{{ $order->noest_status }}</p>
+                            @if ($order->noest_driver)<p class="text-xs text-slate-500">Livreur : {{ $order->noest_driver }}</p>@endif
+                            @if (! empty($order->noest_activity))
+                                <ol class="mt-2 space-y-1 border-s border-slate-200 ps-3 text-xs text-slate-500">
+                                    @foreach (array_reverse($order->noest_activity) as $ev)
+                                        <li>
+                                            <span class="font-medium text-ink-700">{{ $ev['event'] ?? '—' }}</span>
+                                            <span class="text-slate-400">· {{ $ev['date'] ?? '' }}</span>
+                                            @if (! empty($ev['causer'])) <span class="text-slate-400">({{ $ev['causer'] }})</span>@endif
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            @endif
+                        @else
+                            <p class="mt-1 text-xs text-slate-400">Cliquez sur « Vérifier le suivi » pour interroger Noest.</p>
+                        @endif
                     </div>
                 @endif
             @endif

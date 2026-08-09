@@ -12,9 +12,9 @@ export default {
     // so the JIT scanner can't see them. Safelist ONLY the exact classes used
     // (keeps the CSS tiny — low-bandwidth first).
     safelist: [
-        'bg-amber-50', 'bg-blue-50', 'bg-indigo-50', 'bg-cyan-50', 'bg-green-50', 'bg-red-50', 'bg-rose-50', 'bg-gray-50',
-        'bg-amber-100', 'bg-blue-100', 'bg-indigo-100', 'bg-cyan-100', 'bg-green-100', 'bg-red-100', 'bg-rose-100', 'bg-gray-100',
-        'text-amber-700', 'text-blue-700', 'text-indigo-700', 'text-cyan-700', 'text-green-700', 'text-red-700', 'text-rose-700', 'text-gray-700',
+        'bg-amber-50', 'bg-blue-50', 'bg-indigo-50', 'bg-cyan-50', 'bg-green-50', 'bg-red-50', 'bg-rose-50', 'bg-gray-50', 'bg-teal-50',
+        'bg-amber-100', 'bg-blue-100', 'bg-indigo-100', 'bg-cyan-100', 'bg-green-100', 'bg-red-100', 'bg-rose-100', 'bg-gray-100', 'bg-teal-100',
+        'text-amber-700', 'text-blue-700', 'text-indigo-700', 'text-cyan-700', 'text-green-700', 'text-red-700', 'text-rose-700', 'text-gray-700', 'text-teal-700',
     ],
     theme: {
         extend: {

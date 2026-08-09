@@ -46,6 +46,7 @@ fun statusColor(status: String): Color = when (status) {
     "pending" -> Color(0xFFF59E0B)
     "confirmed" -> Color(0xFF3B82F6)
     "preparing" -> Color(0xFF6366F1)
+    "ready" -> Color(0xFF14B8A6)
     "shipped" -> Color(0xFF06B6D4)
     "delivered" -> Color(0xFF22C55E)
     "cancelled" -> Color(0xFFEF4444)
@@ -57,6 +58,7 @@ val STATUS_LABELS = mapOf(
     "pending" to "En attente",
     "confirmed" to "Confirmée",
     "preparing" to "En préparation",
+    "ready" to "Prête à expédier",
     "shipped" to "Expédiée",
     "delivered" to "Livrée",
     "cancelled" to "Annulée",

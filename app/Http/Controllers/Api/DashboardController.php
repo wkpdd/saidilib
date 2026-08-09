@@ -29,12 +29,12 @@ class DashboardController extends Controller
             'today' => [
                 'orders'  => Order::whereDate('created_at', $today)->count(),
                 'revenue' => (float) Order::whereDate('created_at', $today)
-                    ->whereIn('status', ['confirmed', 'preparing', 'shipped', 'delivered'])->sum('total'),
+                    ->whereIn('status', ['confirmed', 'preparing', 'ready', 'shipped', 'delivered'])->sum('total'),
             ],
             'totals' => [
                 'orders_pending' => Order::where('status', 'pending')->count(),
                 'orders_total'   => Order::count(),
-                'revenue'        => (float) Order::whereIn('status', ['confirmed', 'shipped', 'delivered'])->sum('total'),
+                'revenue'        => (float) Order::whereIn('status', ['confirmed', 'ready', 'shipped', 'delivered'])->sum('total'),
                 'products'       => Product::count(),
                 'low_stock'      => Product::where('track_stock', true)->where('stock', '<=', 3)->count(),
                 'unread_notifications' => AdminNotification::unread()->count(),

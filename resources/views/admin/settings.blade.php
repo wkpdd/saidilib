@@ -141,6 +141,19 @@
             <input type="hidden" name="noest_enabled" value="0">
             <input type="checkbox" name="noest_enabled" value="1" @checked($v('noest_enabled')==='1') class="rounded"> Activer l'expédition via Noest
         </label>
+        <label class="mt-2 flex items-center gap-2 text-sm">
+            <input type="hidden" name="noest_auto_ready" value="0">
+            <input type="checkbox" name="noest_auto_ready" value="1" @checked($v('noest_auto_ready', '1')==='1') class="rounded">
+            Envoyer automatiquement à Noest quand une commande est marquée « prête »
+        </label>
+        <p class="mt-1 text-xs text-slate-400">
+            Le colis est alors créé <b>et validé</b> chez Noest en un clic depuis la commande
+            (ou en lot depuis la liste des commandes). Décochez pour garder l'envoi manuel.
+        </p>
+        <p class="mt-3 text-xs text-slate-400">
+            Enregistrez d'abord, puis testez la connexion avec le bouton en bas de page
+            (lecture seule : aucun colis n'est créé).
+        </p>
     </div>
 
     <div class="lg:col-span-2">
@@ -148,12 +161,18 @@
     </div>
 </form>
 
-{{-- Telegram test (separate form) --}}
-<form action="{{ route('admin.settings.telegram.test') }}" method="post" class="lg:col-span-2">
-    @csrf
-    <button class="btn-ghost">📨 Envoyer un test Telegram</button>
-    <span class="ms-2 text-xs text-slate-400">Enregistrez d'abord vos paramètres.</span>
-</form>
+{{-- Connection tests (separate forms — they don't save anything) --}}
+<div class="flex flex-wrap items-center gap-3 lg:col-span-2">
+    <form action="{{ route('admin.settings.telegram.test') }}" method="post">
+        @csrf
+        <button class="btn-ghost">📨 Envoyer un test Telegram</button>
+    </form>
+    <form action="{{ route('admin.settings.noest.test') }}" method="post">
+        @csrf
+        <button class="btn-ghost">🚚 Tester la connexion Noest</button>
+    </form>
+    <span class="text-xs text-slate-400">Enregistrez d'abord vos paramètres.</span>
+</div>
 
 {{-- Danger zone — reset test data --}}
 <div class="mt-8 rounded-2xl border-2 border-red-200 bg-red-50/50 p-6">

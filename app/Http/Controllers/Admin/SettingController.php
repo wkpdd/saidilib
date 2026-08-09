@@ -29,7 +29,7 @@ class SettingController extends Controller
             'social'   => ['facebook', 'instagram', 'tiktok'],
             'seo'      => ['meta_title', 'meta_description'],
             'telegram' => ['telegram_bot_token', 'telegram_chat_ids', 'telegram_channel_id'],
-            'noest'    => ['noest_token', 'noest_guid', 'noest_enabled', 'noest_station_code'],
+            'noest'    => ['noest_token', 'noest_guid', 'noest_enabled', 'noest_station_code', 'noest_auto_ready'],
             'socialapi'=> ['fb_page_id', 'fb_page_token', 'ig_user_id', 'ig_token', 'fb_graph_version', 'social_footer'],
             'imgsearch'=> ['google_cse_key', 'google_cse_cx', 'google_cse_reuse_only'],
         ];
@@ -50,6 +50,27 @@ class SettingController extends Controller
         Setting::flush();
 
         return back()->with('success', 'Paramètres enregistrés.');
+    }
+
+    /**
+     * Check the Noest credentials with a read-only call (their fee grid).
+     * Nothing is created, so it is safe to press at any time.
+     */
+    public function noestTest()
+    {
+        $driver = new \App\Services\Delivery\NoestDriver();
+
+        if (! $driver->isEnabled()) {
+            return back()->with('error', 'Renseignez le token et le GUID, cochez « Activer », puis enregistrez avant de tester.');
+        }
+
+        $fees = $driver->fees();
+
+        if ($fees === null) {
+            return back()->with('error', 'Noest a refusé la connexion (token/GUID invalides ou API injoignable). Vérifiez les identifiants.');
+        }
+
+        return back()->with('success', 'Connexion Noest OK — ' . count($fees) . ' tarif(s) de livraison reçus.');
     }
 
     /** Send a test message to all configured Telegram chats. */
