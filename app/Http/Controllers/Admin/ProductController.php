@@ -6,26 +6,130 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Pixel;
 use App\Models\Product;
+use App\Models\ProductImage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    /** At or below this many units a tracked product is flagged "stock bas". */
+    public const LOW_STOCK = 5;
+
     public function index(Request $request)
     {
-        $query = Product::with('category')->latest();
-        if ($search = $request->query('q')) {
-            $query->where('name_fr', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%");
-        }
-        $products = $query->paginate(20)->withQueryString();
+        $query = $this->filtered($request);
 
-        return view('admin.products.index', compact('products'));
+        $perPage = min(max((int) $request->query('per_page', 20), 10), 100);
+        $products = $query->with('category')->paginate($perPage)->withQueryString();
+
+        // Counters over the *filtered* set, so they always describe what's shown.
+        $counts = [
+            'total'  => $products->total(),
+            'hidden' => (clone $query)->where('is_active', false)->count(),
+            'out'    => (clone $query)->where('track_stock', true)->where('stock', '<=', 0)->count(),
+            'low'    => (clone $query)->where('track_stock', true)
+                ->whereBetween('stock', [1, self::LOW_STOCK])->count(),
+        ];
+
+        return view('admin.products.index', [
+            'products'   => $products,
+            'counts'     => $counts,
+            'categories' => Category::orderBy('name_fr')->get(),
+            'brands'     => Product::query()->whereNotNull('brand')->where('brand', '!=', '')
+                ->distinct()->orderBy('brand')->pluck('brand'),
+        ]);
     }
 
-    public function create()
+    /**
+     * The back-office product filter. Every control on the toolbar maps to one
+     * query key here — keep the two in step.
+     */
+    private function filtered(Request $request): Builder
     {
+        $query = Product::query();
+
+        if ($search = trim((string) $request->query('q'))) {
+            $query->where(function (Builder $q) use ($search) {
+                $q->where('name_fr', 'like', "%{$search}%")
+                  ->orWhere('name_ar', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('brand', 'like', "%{$search}%");
+            });
+        }
+
+        if ($categoryId = $request->query('category')) {
+            $category = Category::with('children')->find($categoryId);
+            if ($category) {
+                $query->whereIn('category_id', $category->children->pluck('id')->push($category->id));
+            }
+        } elseif ($request->query('category') === '0') {
+            // "0" is falsy above, so it reaches here: the "sans catégorie" bucket.
+            $query->whereNull('category_id');
+        }
+
+        if ($brand = $request->query('brand')) {
+            $query->where('brand', $brand);
+        }
+
+        match ($request->query('status')) {
+            'active' => $query->where('is_active', true),
+            'hidden' => $query->where('is_active', false),
+            default  => null,
+        };
+
+        match ($request->query('stock')) {
+            'out'       => $query->where('track_stock', true)->where('stock', '<=', 0),
+            'low'       => $query->where('track_stock', true)->whereBetween('stock', [1, self::LOW_STOCK]),
+            'in'        => $query->where(fn (Builder $q) => $q->where('track_stock', false)->orWhere('stock', '>', 0)),
+            'untracked' => $query->where('track_stock', false),
+            default     => null,
+        };
+
+        if ($request->boolean('promo')) {
+            $query->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price');
+        }
+        if ($request->boolean('featured')) {
+            $query->where('is_featured', true);
+        }
+        if ($request->boolean('new')) {
+            $query->where('is_new', true);
+        }
+        if ($request->boolean('shipping')) {
+            $query->where('free_shipping', true);
+        }
+        if ($request->boolean('no_image')) {
+            $query->whereNull('main_image')->whereDoesntHave('images');
+        }
+
+        if ($request->filled('min')) {
+            $query->where('price', '>=', (float) $request->query('min'));
+        }
+        if ($request->filled('max')) {
+            $query->where('price', '<=', (float) $request->query('max'));
+        }
+
+        return match ($request->query('sort')) {
+            'name'       => $query->orderBy('name_fr'),
+            'price_asc'  => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            'stock_asc'  => $query->orderBy('stock'),
+            'stock_desc' => $query->orderByDesc('stock'),
+            'views'      => $query->orderByDesc('views'),
+            'oldest'     => $query->oldest(),
+            default      => $query->latest(),
+        };
+    }
+
+    public function create(Request $request)
+    {
+        // category_id arrives when chaining creations ("enregistrer et ajouter un
+        // autre") so the next product starts in the same category.
         return view('admin.products.form', [
-            'product'    => new Product(['is_active' => true]),
+            'product'    => new Product([
+                'is_active'   => true,
+                'category_id' => $request->query('category_id'),
+            ]),
             'categories' => Category::orderBy('name_fr')->get(),
             'pixels'     => Pixel::all(),
         ]);
@@ -41,6 +145,12 @@ class ProductController extends Controller
         $this->syncVariants($request, $product);
         $this->syncQuantityTiers($request, $product);
         $product->pixels()->sync($request->input('pixels', []));
+
+        if ($request->input('after_save') === 'create') {
+            return redirect()
+                ->route('admin.products.create', ['category_id' => $product->category_id])
+                ->with('success', "« {$product->name_fr} » créé. Ajoutez le suivant.");
+        }
 
         return redirect()->route('admin.products.edit', $product)->with('success', 'Produit créé.');
     }
@@ -108,6 +218,26 @@ class ProductController extends Controller
         return back()->with($ok ? 'success' : 'error', $ok ? 'Photo pivotée.' : 'Impossible de pivoter cette photo (image externe ?).');
     }
 
+    /** Delete one gallery photo straight away (no need to save the product). */
+    public function destroyImage(Product $product, ProductImage $image)
+    {
+        abort_unless($image->product_id === $product->id, 404);
+
+        \App\Support\ProductImages::delete($product, [$image->id]);
+
+        return back()->with('success', 'Photo supprimée.');
+    }
+
+    /** Promote a gallery photo to the product's main image. */
+    public function setMainImage(Product $product, ProductImage $image)
+    {
+        abort_unless($image->product_id === $product->id, 404);
+
+        $product->update(['main_image' => $image->path]);
+
+        return back()->with('success', 'Image principale mise à jour.');
+    }
+
     // ---------------------------------------------------------------
 
     private function validateData(Request $request): array
@@ -131,6 +261,9 @@ class ProductController extends Controller
             'is_active'        => 'nullable|boolean',
             'is_featured'      => 'nullable|boolean',
             'is_new'           => 'nullable|boolean',
+            // Limited-time free delivery. Blank end date = runs until switched off.
+            'free_shipping'       => 'nullable|boolean',
+            'free_shipping_until' => 'nullable|date',
             // Uploaded gallery images: real images only, capped in size/count.
             'images'           => 'nullable|array|max:12',
             'images.*'         => 'image|mimes:jpeg,jpg,png,webp,gif|max:5120',
@@ -140,6 +273,12 @@ class ProductController extends Controller
         // `images` / `image_urls` are NOT product columns — they're handled by
         // syncImages(). Strip them so they don't leak into Product::update().
         unset($validated['images'], $validated['image_urls']);
+
+        // Campaign off → drop the end date, so re-enabling it later doesn't
+        // silently reuse a date that has already gone by.
+        if (empty($validated['free_shipping'])) {
+            $validated['free_shipping_until'] = null;
+        }
 
         return $validated;
     }
@@ -158,11 +297,6 @@ class ProductController extends Controller
 
     private function syncImages(Request $request, Product $product): void
     {
-        // Delete removed images
-        foreach ((array) $request->input('delete_images', []) as $id) {
-            $product->images()->where('id', $id)->delete();
-        }
-
         // External image URLs (one per line)
         if ($urls = $request->input('image_urls')) {
             foreach (preg_split('/\r\n|\r|\n/', $urls) as $url) {
@@ -250,9 +384,10 @@ class ProductController extends Controller
             if ($label === '') {
                 $label = trim(implode(' · ', array_filter([$color, $size])));
             }
-            // Skip genuinely empty rows (no name/colour/size and nothing else set).
-            if ($label === '' && $color === '' && $size === '' && ! $isColorRow
-                && $stock === '' && ($priceDelta === '' || (float) $priceDelta === 0.0)) {
+            // A row with no name, no colour and no size has nothing to show the
+            // customer — saving it would leave the product with an option that
+            // can't be chosen. Stock or a price on its own is not an identity.
+            if ($label === '' && $color === '' && $size === '' && ! $isColorRow) {
                 continue;
             }
 
@@ -271,7 +406,9 @@ class ProductController extends Controller
                 'image_id'    => $imageId,
                 'option_group'=> $isColorRow ? 'color' : 'size',
                 'price_delta' => (float) ($v['price_delta'] ?? 0),
-                'stock'       => (int) ($v['stock'] ?? 0),
+                // Empty = not counted for this option (the form says "vide = illimité").
+                // Storing 0 here made every such variant look sold out.
+                'stock'       => $stock === '' ? null : (int) $stock,
                 'is_default'  => isset($v['is_default']) && $v['is_default'],
                 'sort_order'  => $i,
             ];

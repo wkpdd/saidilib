@@ -77,6 +77,23 @@ class Thumbnailer
         return self::url($path, self::HERO_WIDTH);
     }
 
+    /**
+     * Drop every cached thumbnail of a stored image. Called when the original
+     * is deleted, so the thumbs directory doesn't accumulate orphans (and a
+     * later upload reusing the path can't serve a stale crop).
+     */
+    public static function forget(string $path): void
+    {
+        if (Setting::isExternal($path)) {
+            return;
+        }
+
+        $disk = Storage::disk('public');
+        foreach ([...self::WIDTHS, self::HERO_WIDTH] as $w) {
+            $disk->delete(self::thumbPath($path, $w));
+        }
+    }
+
     private static function thumbPath(string $path, int $width): string
     {
         $withoutExt = preg_replace('/\.[^.\/]+$/', '', $path);

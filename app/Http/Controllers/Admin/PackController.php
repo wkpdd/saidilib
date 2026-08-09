@@ -39,7 +39,7 @@ class PackController extends Controller
     {
         return view('admin.packs.form', [
             'pack'     => new Pack(['is_active' => true]),
-            'products' => Product::orderBy('name_fr')->get(['id', 'name_fr', 'sku', 'price']),
+            'products' => $this->productOptions(),
         ]);
     }
 
@@ -62,7 +62,7 @@ class PackController extends Controller
 
         return view('admin.packs.form', [
             'pack'     => $pack,
-            'products' => Product::orderBy('name_fr')->get(['id', 'name_fr', 'sku', 'price']),
+            'products' => $this->productOptions(),
         ]);
     }
 
@@ -104,6 +104,27 @@ class PackController extends Controller
             'items.*.variant_id'  => 'nullable|integer',
             'items.*.quantity'    => 'required|integer|min:1|max:999',
         ]) + ['is_active' => $request->boolean('is_active'), 'price' => $request->input('price') ?: null];
+    }
+
+    /**
+     * Products for the picker, keyed by id. Short keys because the whole
+     * catalogue ships inline with the page and the search runs client-side
+     * (no round-trip per keystroke on a slow connection).
+     */
+    private function productOptions(): \Illuminate\Support\Collection
+    {
+        return Product::orderBy('name_fr')
+            ->get(['id', 'name_fr', 'name_ar', 'sku', 'brand', 'price', 'is_active'])
+            ->map(fn (Product $p) => [
+                'i' => $p->id,
+                'n' => $p->name_fr,
+                's' => $p->sku,
+                'b' => $p->brand,
+                'a' => $p->name_ar,
+                'p' => (float) $p->price,
+                'x' => ! $p->is_active,
+            ])
+            ->keyBy('i');
     }
 
     private function uniqueSlug(string $name, ?int $ignore = null): string

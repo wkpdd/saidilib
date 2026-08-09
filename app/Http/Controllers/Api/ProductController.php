@@ -92,11 +92,8 @@ class ProductController extends Controller
     {
         abort_unless($image->product_id === $product->id, 404);
 
-        $image->delete();
-        // Keep main_image coherent when it pointed at the removed photo.
-        if ($product->main_image === $image->path) {
-            $product->update(['main_image' => $product->images()->orderBy('sort_order')->first()?->path]);
-        }
+        // Drops the row, the stored file + thumbnails, and re-points main_image.
+        \App\Support\ProductImages::delete($product, [$image->id]);
 
         return response()->json(['ok' => true, 'product' => self::full($product->fresh())]);
     }
@@ -215,7 +212,7 @@ class ProductController extends Controller
                 'size'         => $size ?: null,
                 'option_group' => $hex !== '' || $color !== '' ? 'color' : 'size',
                 'price_delta'  => (float) ($v['price_delta'] ?? 0),
-                'stock'        => (int) ($v['stock'] ?? 0),
+                'stock'        => ($v['stock'] ?? '') === '' ? null : (int) $v['stock'],
                 'sort_order'   => $i,
             ];
 

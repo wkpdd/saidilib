@@ -59,11 +59,22 @@
             @if ($product->exists && $product->images->isNotEmpty())
                 <div class="mb-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
                     @foreach ($product->images as $img)
-                        <label class="relative block overflow-hidden rounded-xl ring-1 ring-slate-200">
+                        @php $isMain = $product->mainImagePath() === $img->path; @endphp
+                        <div class="relative block overflow-hidden rounded-xl ring-1 {{ $isMain ? 'ring-2 ring-brand-500' : 'ring-slate-200' }}">
                             <img src="{{ $img->url }}" class="aspect-square w-full object-cover">
-                            <span class="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/50 px-2 py-1 text-[11px] text-white">
-                                #{{ $img->id }}
-                                <input type="checkbox" name="delete_images[]" value="{{ $img->id }}" title="Supprimer" class="rounded">
+                            <span class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/55 px-2 py-1 text-[11px] text-white">
+                                @if ($isMain)
+                                    <span title="Image principale">⭐ Principale</span>
+                                @else
+                                    <button type="button" title="Définir comme image principale"
+                                            data-photo-action data-url="{{ route('admin.products.images.main', [$product, $img]) }}"
+                                            class="rounded px-1 hover:bg-white/20">☆ Principale</button>
+                                @endif
+                                <button type="button" title="Supprimer cette photo"
+                                        data-photo-action data-method="DELETE"
+                                        data-confirm="Supprimer définitivement cette photo ?"
+                                        data-url="{{ route('admin.products.images.destroy', [$product, $img]) }}"
+                                        class="rounded px-1 text-red-300 hover:bg-white/20 hover:text-red-200">🗑</button>
                             </span>
                             @unless (\App\Models\Setting::isExternal($img->path))
                                 <span class="absolute right-1 top-1 flex gap-1">
@@ -73,10 +84,12 @@
                                             class="rounded-lg bg-black/55 px-1.5 py-0.5 text-xs text-white hover:bg-black/75">↻</button>
                                 </span>
                             @endunless
-                        </label>
+                        </div>
                     @endforeach
                 </div>
-                <p class="mb-3 text-xs text-slate-400">Cochez une image pour la supprimer à l'enregistrement.</p>
+                <p class="mb-3 text-xs text-slate-400">
+                    🗑 supprime la photo immédiatement (et son fichier). ☆ choisit l'image principale affichée en boutique.
+                </p>
             @endif
 
             <label class="label">Téléverser des images</label>
@@ -184,7 +197,12 @@
                         <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $v['id'] ?? '' }}">
                         <input type="hidden" name="variants[{{ $i }}][has_color]" value="{{ (!empty($v['color']) || !empty($v['color_hex'])) ? 1 : 0 }}" data-has-color>
                         <input name="variants[{{ $i }}][color]" value="{{ $v['color'] ?? '' }}" placeholder="Rouge (optionnel)" class="input col-span-3" data-color-name>
-                        <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
+                        <div class="relative col-span-1" data-color-cell>
+                            <input name="variants[{{ $i }}][color_hex]" value="{{ $v['color_hex'] ?? '#000000' }}" type="color"
+                                   title="Cliquez pour choisir une couleur" class="h-10 w-full rounded-lg border border-slate-200" data-color-hex>
+                            <button type="button" data-color-clear title="Ce n'est pas une couleur"
+                                    class="absolute -end-1 -top-1 hidden h-4 w-4 place-items-center rounded-full bg-slate-700 text-[9px] leading-none text-white">✕</button>
+                        </div>
                         <input name="variants[{{ $i }}][size]" value="{{ $v['size'] ?? '' }}" placeholder="L / 24x32" class="input col-span-2">
                         <input name="variants[{{ $i }}][price_delta]" value="{{ $v['price_delta'] ?? 0 }}" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
                         <input name="variants[{{ $i }}][stock]" value="{{ $v['stock'] ?? '' }}" type="number" min="0" placeholder="Stock (vide = illimité)" class="input col-span-2">
@@ -223,6 +241,34 @@
             <label class="label">Stock</label>
             <input name="stock" type="number" value="{{ old('stock', $product->stock ?? 0) }}" class="input mb-3">
             <label class="flex items-center gap-2 text-sm"><input type="hidden" name="track_stock" value="0"><input type="checkbox" name="track_stock" value="1" @checked(old('track_stock', $product->track_stock)) class="rounded"> Gérer le stock</label>
+        </div>
+
+        {{-- Limited-time free delivery --}}
+        @php
+            $freeShipping = (bool) old('free_shipping', $product->free_shipping);
+            $freeUntil = old('free_shipping_until', optional($product->free_shipping_until)->format('Y-m-d'));
+        @endphp
+        <div class="card p-5">
+            <h2 class="mb-1 font-semibold">🚚 Livraison offerte</h2>
+            <p class="mb-3 text-[11px] leading-relaxed text-slate-400">
+                Les frais de livraison disparaissent au paiement quand <b>tous</b> les articles
+                du panier bénéficient de l'offre. Laissez la date vide pour une offre
+                sans limite (elle s'arrête quand vous décochez la case).
+            </p>
+            <label class="flex items-center gap-2 text-sm">
+                <input type="hidden" name="free_shipping" value="0">
+                <input type="checkbox" name="free_shipping" value="1" id="freeShipping" @checked($freeShipping) class="rounded">
+                Livraison offerte sur ce produit
+            </label>
+            <div id="freeShippingDates" class="mt-3 {{ $freeShipping ? '' : 'hidden' }}">
+                <label class="label">Jusqu'au (inclus) — optionnel</label>
+                <input name="free_shipping_until" type="date" value="{{ $freeUntil }}" class="input">
+                @if ($product->exists && $product->free_shipping && ! $product->has_free_shipping)
+                    <p class="mt-2 text-xs text-amber-600">
+                        ⚠️ Offre expirée le {{ $product->free_shipping_until->format('d/m/Y') }} — choisissez une nouvelle date.
+                    </p>
+                @endif
+            </div>
         </div>
 
         {{-- Quantity breaks: "à partir de N articles, -X %" --}}
@@ -297,6 +343,13 @@
 
         <div class="card p-5">
             <button class="btn-primary w-full">💾 Enregistrer</button>
+            @if ($product->exists)
+                <a href="{{ route('admin.products.create', ['category_id' => $product->category_id]) }}"
+                   class="btn-ghost mt-2 w-full">➕ Ajouter un autre produit</a>
+            @else
+                {{-- Saves, then comes back to a blank form (same catégorie) for the next one. --}}
+                <button name="after_save" value="create" class="btn-ghost mt-2 w-full">💾 Enregistrer et ajouter un autre</button>
+            @endif
             <a href="{{ route('admin.products.index') }}" class="btn-ghost mt-2 w-full">Annuler</a>
         </div>
     </div>
@@ -323,6 +376,11 @@
 
 @push('scripts')
 <script>
+    // The end-date field only matters while the offer is switched on.
+    document.getElementById('freeShipping')?.addEventListener('change', (e) => {
+        document.getElementById('freeShippingDates').classList.toggle('hidden', !e.target.checked);
+    });
+
     // Quantity-break rows
     let tIndex = {{ count($tierRows) }};
     document.getElementById('addTier')?.addEventListener('click', () => {
@@ -353,7 +411,12 @@
         row.innerHTML = `
             <input type="hidden" name="variants[${vIndex}][has_color]" value="${prefill ? 1 : 0}" data-has-color>
             <input name="variants[${vIndex}][color]" value="${name}" placeholder="Rouge (optionnel)" class="input col-span-3" data-color-name>
-            <input name="variants[${vIndex}][color_hex]" type="color" value="${hex}" class="h-10 w-full col-span-1 rounded-lg border border-slate-200" data-color-hex>
+            <div class="relative col-span-1" data-color-cell>
+                <input name="variants[${vIndex}][color_hex]" type="color" value="${hex}"
+                       title="Cliquez pour choisir une couleur" class="h-10 w-full rounded-lg border border-slate-200" data-color-hex>
+                <button type="button" data-color-clear title="Ce n'est pas une couleur"
+                        class="absolute -end-1 -top-1 hidden h-4 w-4 place-items-center rounded-full bg-slate-700 text-[9px] leading-none text-white">✕</button>
+            </div>
             <input name="variants[${vIndex}][size]" placeholder="L / 24x32" class="input col-span-2">
             <input name="variants[${vIndex}][price_delta]" type="number" step="any" placeholder="+ Prix" class="input col-span-1">
             <input name="variants[${vIndex}][stock]" type="number" min="0" placeholder="Stock (vide = illimité)" class="input col-span-2">
@@ -362,33 +425,87 @@
         row.querySelector('button').addEventListener('click', () => row.remove());
         document.getElementById('variants').appendChild(row);
         vIndex++;
+        paintAllColorCells();
     }
 
-    // Rotate photo buttons: POST a standalone form (never submits the product form).
+    // Photo actions (rotate / set main / delete) POST a standalone form, so they
+    // never submit — nor need — the surrounding product form.
+    function postPhotoAction(url, fields) {
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = url;
+        f.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">';
+        for (const [name, value] of Object.entries(fields || {})) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            f.appendChild(input);
+        }
+        document.body.appendChild(f);
+        f.submit();
+    }
+
     document.querySelectorAll('[data-rotate]').forEach((btn) => {
+        btn.addEventListener('click', () => postPhotoAction(btn.dataset.url, { dir: btn.dataset.rotate }));
+    });
+
+    document.querySelectorAll('[data-photo-action]').forEach((btn) => {
         btn.addEventListener('click', () => {
-            const f = document.createElement('form');
-            f.method = 'POST';
-            f.action = btn.dataset.url;
-            f.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">' +
-                '<input type="hidden" name="dir" value="' + btn.dataset.rotate + '">';
-            document.body.appendChild(f);
-            f.submit();
+            if (btn.dataset.confirm && !confirm(btn.dataset.confirm)) return;
+            postPhotoAction(btn.dataset.url, btn.dataset.method ? { _method: btn.dataset.method } : {});
         });
     });
 
     // Picking a colour swatch (even without typing a name) marks the row as a
     // "colour" variant, so the storefront picker shows it as a swatch — and
     // remembers it on this device so it can be reused instantly next time.
+    function paintColorCell(row) {
+        const on = row.querySelector('[data-has-color]')?.value === '1';
+        const hex = row.querySelector('[data-color-hex]');
+        const clear = row.querySelector('[data-color-clear]');
+        if (hex) hex.classList.toggle('opacity-30', !on);
+        if (clear) {
+            clear.classList.toggle('hidden', !on);
+            clear.classList.toggle('grid', on);
+        }
+    }
+
+    function setColorRow(row, on) {
+        const flag = row.querySelector('[data-has-color]');
+        if (flag) flag.value = on ? '1' : '0';
+        paintColorCell(row);
+    }
+
+    // Opening the picker IS the intent to set a colour. We can't wait for a
+    // value change: choosing black leaves the input at its #000000 default, so
+    // no input/change event ever fires and the colour was silently dropped.
+    document.getElementById('variants').addEventListener('click', (e) => {
+        if (e.target.matches('[data-color-hex]')) {
+            setColorRow(e.target.closest('[data-variant-row]'), true);
+        }
+        if (e.target.matches('[data-color-clear]')) {
+            setColorRow(e.target.closest('[data-variant-row]'), false);
+        }
+    });
+
     document.getElementById('variants').addEventListener('input', (e) => {
         if (e.target.matches('[data-color-hex]')) {
             const row = e.target.closest('[data-variant-row]');
-            const flag = row.querySelector('[data-has-color]');
-            if (flag) flag.value = '1';
+            setColorRow(row, true);
             const nameInput = row.querySelector('[data-color-name]');
             saveRecentColor(nameInput ? nameInput.value.trim() : '', e.target.value);
         }
+        // Typing a colour name is just as clear an intent as picking a swatch.
+        if (e.target.matches('[data-color-name]') && e.target.value.trim() !== '') {
+            setColorRow(e.target.closest('[data-variant-row]'), true);
+        }
     });
+
+    // Reflect the saved state when the form opens (and on every added row).
+    const paintAllColorCells = () =>
+        document.querySelectorAll('[data-variant-row]').forEach(paintColorCell);
+    paintAllColorCells();
 
     // Scan a barcode/QR to fill the SKU field instantly.
     document.getElementById('scanSkuBtn')?.addEventListener('click', () => {

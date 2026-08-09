@@ -85,6 +85,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('products/image-search', [Admin\ProductImageSearchController::class, 'search'])->name('products.imagesearch.search');
         Route::post('products/{product}/image-search', [Admin\ProductImageSearchController::class, 'attach'])->name('products.imagesearch.attach');
         Route::post('products/{product}/images/{image}/rotate', [Admin\ProductController::class, 'rotateImage'])->name('products.images.rotate');
+        Route::post('products/{product}/images/{image}/main', [Admin\ProductController::class, 'setMainImage'])->name('products.images.main');
+        Route::delete('products/{product}/images/{image}', [Admin\ProductController::class, 'destroyImage'])->name('products.images.destroy');
         Route::post('packs/toggle', [Admin\PackController::class, 'toggle'])->name('packs.toggle');
         Route::resource('packs', Admin\PackController::class)->except('show');
         Route::resource('products', Admin\ProductController::class);
