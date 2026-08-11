@@ -10,14 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
-    public const SUPPORTED = ['fr', 'ar'];
+    public const SUPPORTED = ['ar', 'fr'];
+
+    public const DEFAULT = 'ar';
 
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = Session::get('locale', config('app.locale', 'fr'));
+        $locale = Session::get('locale', config('app.locale', self::DEFAULT));
 
         if (! in_array($locale, self::SUPPORTED, true)) {
-            $locale = 'fr';
+            $locale = self::DEFAULT;
         }
 
         App::setLocale($locale);

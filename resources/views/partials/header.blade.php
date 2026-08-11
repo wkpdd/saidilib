@@ -38,8 +38,8 @@
             <div class="ms-auto flex items-center gap-1.5">
                 {{-- Language switch --}}
                 <div class="flex rounded-xl bg-slate-100 p-0.5 text-sm font-semibold">
-                    <a href="{{ route('locale.switch', 'fr') }}" class="rounded-lg px-2.5 py-1 {{ $locale==='fr' ? 'bg-white shadow-soft text-brand-700' : 'text-slate-500' }}">FR</a>
                     <a href="{{ route('locale.switch', 'ar') }}" class="rounded-lg px-2.5 py-1 {{ $locale==='ar' ? 'bg-white shadow-soft text-brand-700' : 'text-slate-500' }}">ع</a>
+                    <a href="{{ route('locale.switch', 'fr') }}" class="rounded-lg px-2.5 py-1 {{ $locale==='fr' ? 'bg-white shadow-soft text-brand-700' : 'text-slate-500' }}">FR</a>
                 </div>
 
                 {{-- Account --}}
