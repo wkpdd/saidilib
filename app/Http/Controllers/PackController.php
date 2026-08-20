@@ -40,9 +40,12 @@ class PackController extends Controller
             if ($idx < $items->count() - 1) {
                 $unit = round($base * $factor, 2);
             } else {
-                // Last line absorbs rounding so the total lands exactly on target.
+                // Last line absorbs the remainder. FLOOR (not round) to cents so
+                // the cart total can never EXCEED the advertised promo — any
+                // residual drift is at most a couple of centimes in the
+                // customer's favour (invisible in whole-dinar display).
                 $remaining = $target - $charged;
-                $unit = max(0, round($remaining / $item->quantity, 2));
+                $unit = max(0, floor($remaining / $item->quantity * 100) / 100);
             }
             $charged += $unit * $item->quantity;
 

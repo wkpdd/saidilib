@@ -43,13 +43,32 @@ class CartService
             ->get()
             ->keyBy('id');
 
+        // Variants referenced by loose lines, so their price_delta can be
+        // re-applied when we re-price against the current tier.
+        $variantIds = array_filter(array_column($raw, 'variant_id'));
+        $variants = $variantIds
+            ? ProductVariant::whereIn('id', $variantIds)->get()->keyBy('id')
+            : collect();
+
         $clientType = auth('client')->user()?->type;
 
         foreach ($raw as $key => $line) {
             $qty     = (int) $line['qty'];
-            $base    = (float) $line['price'];
             $product = $products->get($line['product_id']);
             $isPack  = ! empty($line['pack_id']);
+
+            // Re-price loose lines from the CURRENT client tier so the base and
+            // the tier can never diverge (e.g. added as guest/retail, then logs
+            // in as wholesale — previously kept the retail base). Pack lines keep
+            // their frozen promo price; a vanished product keeps its stored price.
+            if ($isPack || ! $product) {
+                $base = (float) $line['price'];
+            } else {
+                $delta = isset($line['variant_id'])
+                    ? (float) ($variants->get($line['variant_id'])?->price_delta ?? 0)
+                    : 0.0;
+                $base = max(0, $product->priceForTier($clientType) + $delta);
+            }
 
             // Pack lines already carry the pack's own discount: stacking the
             // quantity breaks on top would discount the same unit twice.
