@@ -107,6 +107,15 @@ return [
     'view_order'       => 'عرض الطلب',
     'sign_in'          => 'تسجيل الدخول',
 
+    // Password reset
+    'forgot_password'      => 'نسيت كلمة المرور؟',
+    'forgot_password_hint' => 'أدخل بريدك الإلكتروني وسنرسل لك رابطاً لاختيار كلمة مرور جديدة.',
+    'send_reset_link'      => 'إرسال الرابط',
+    'password_link_sent'   => 'إذا كان هناك حساب بهذا البريد، فقد تم إرسال رابط إعادة التعيين.',
+    'new_password'         => 'كلمة مرور جديدة',
+    'save_password'        => 'حفظ كلمة المرور',
+    'password_changed'     => 'تم تغيير كلمة المرور. يمكنك الآن تسجيل الدخول.',
+
     // Sharing
     'share_product'    => 'شارك هذا المنتج',
     'share'            => 'مشاركة',
@@ -144,7 +153,6 @@ return [
     'pack_promo'        => 'سعر الحزمة',
     'pack_view'         => 'عرض الحزمة',
     'pack_items_count'  => 'أداة',
-];
     'invalid_phone' => 'رقم الهاتف غير صالح (مثال: 0550 50 50 50).',
     'unknown_commune' => 'هذه البلدية غير مخدومة — اختر واحدة من القائمة.',
     'select_commune' => 'اختر البلدية',
@@ -153,3 +161,4 @@ return [
     'pack_qty' => "الحزم",
     'remove_pack' => "إزالة الحزمة",
     'pack_removed' => "تمت إزالة الحزمة من السلة.",
+];

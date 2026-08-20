@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\TempPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -98,6 +99,28 @@ class UserController extends Controller
             (array) $request->input('permissions', []),
             array_keys(User::PERMISSIONS)
         ));
+    }
+
+    /**
+     * Give a staff member a new password on the spot (generated unless one is
+     * typed). Restricted to full administrators — the `users` permission alone
+     * shouldn't let a manager take over an admin account.
+     */
+    public function resetPassword(Request $request, User $user)
+    {
+        if (! $request->user()->isFullAdmin()) {
+            return back()->with('error', 'Seul un administrateur peut réinitialiser un mot de passe.');
+        }
+
+        $data = $request->validate(['password' => 'nullable|string|min:6|max:190']);
+        $password = ($data['password'] ?? null) ?: TempPassword::make();
+
+        $user->forceFill(['password' => Hash::make($password)])->save();
+
+        return back()
+            ->with('success', "Mot de passe de {$user->name} réinitialisé.")
+            ->with('new_password', $password)
+            ->with('new_password_user', $user->id);
     }
 
     public function destroy(Request $request, User $user)

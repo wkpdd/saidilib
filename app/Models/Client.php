@@ -34,6 +34,12 @@ class Client extends Authenticatable
         ];
     }
 
+    /** Self-service reset: our own mail + our own storefront route. */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\ClientPasswordReset($token));
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(ClientTransaction::class)->latest();

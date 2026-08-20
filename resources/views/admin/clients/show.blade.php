@@ -35,6 +35,35 @@
             @endif
         </div>
 
+        {{-- Storefront account access --}}
+        <div class="card p-6">
+            <h3 class="mb-1 font-semibold">Accès au compte en ligne</h3>
+            <p class="mb-3 text-xs text-slate-500">Le client a oublié son mot de passe ? Donnez-lui-en un nouveau, ou envoyez-lui un lien.</p>
+
+            @if (session('new_password'))
+                <div class="mb-3 rounded-xl bg-amber-50 p-3 text-sm ring-1 ring-amber-200">
+                    <p class="text-amber-800">Nouveau mot de passe — notez-le, il ne sera plus affiché :</p>
+                    <p class="mt-1 select-all text-center font-mono text-lg font-bold tracking-widest text-amber-900">{{ session('new_password') }}</p>
+                </div>
+            @endif
+
+            <form action="{{ route('admin.clients.password', $client) }}" method="post" class="space-y-2"
+                  onsubmit="return confirm('Réinitialiser le mot de passe de ce client ?')">
+                @csrf
+                <input name="password" type="text" minlength="6" maxlength="190" autocomplete="off"
+                       placeholder="Mot de passe choisi (ou laisser vide)" class="input">
+                <button class="btn-primary w-full">🔑 Réinitialiser le mot de passe</button>
+            </form>
+
+            @if ($client->email)
+                <form action="{{ route('admin.clients.password', $client) }}" method="post" class="mt-2">
+                    @csrf
+                    <input type="hidden" name="mode" value="link">
+                    <button class="btn-ghost w-full">✉️ Envoyer un lien à {{ $client->email }}</button>
+                </form>
+            @endif
+        </div>
+
         {{-- Record a transaction --}}
         <div class="card p-6">
             <h3 class="mb-3 font-semibold">Nouvelle écriture</h3>

@@ -7,8 +7,10 @@ use App\Models\AdminNotification;
 use App\Models\Client;
 use App\Models\ClientTransaction;
 use App\Models\Wilaya;
+use App\Support\TempPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 
 class ClientController extends Controller
 {
@@ -121,6 +123,35 @@ class ClientController extends Controller
         }
 
         return back()->with('success', 'Écriture enregistrée.');
+    }
+
+    /**
+     * Reset a customer's storefront password. Either set one now (generated or
+     * typed) and read it back to the client, or email them a reset link.
+     */
+    public function resetPassword(Request $request, Client $client)
+    {
+        if ($request->input('mode') === 'link') {
+            if (! $client->email) {
+                return back()->with('error', "Ce client n'a pas d'adresse email.");
+            }
+
+            $status = Password::broker('clients')->sendResetLink(['email' => $client->email]);
+
+            return $status === Password::RESET_LINK_SENT
+                ? back()->with('success', "Lien de réinitialisation envoyé à {$client->email}.")
+                : back()->with('error', 'Envoi impossible : ' . __($status));
+        }
+
+        $data = $request->validate(['password' => 'nullable|string|min:6|max:190']);
+        $password = ($data['password'] ?? null) ?: TempPassword::make();
+
+        $client->update(['password' => $password]);
+
+        // Shown once on the next page load — never stored in clear anywhere.
+        return back()
+            ->with('success', 'Mot de passe réinitialisé.')
+            ->with('new_password', $password);
     }
 
     private function validateData(Request $request, ?Client $client = null): array

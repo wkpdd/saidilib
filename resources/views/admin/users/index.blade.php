@@ -22,6 +22,13 @@
     @endforeach
 </div>
 
+@if (session('new_password'))
+    <div class="mb-4 rounded-xl bg-amber-50 p-4 text-sm ring-1 ring-amber-200">
+        <p class="text-amber-800">Nouveau mot de passe — notez-le, il ne sera plus affiché :</p>
+        <p class="mt-1 select-all font-mono text-lg font-bold tracking-widest text-amber-900">{{ session('new_password') }}</p>
+    </div>
+@endif
+
 <div class="mb-4 flex items-center justify-between">
     <p class="text-sm text-slate-500">Administrateurs et employés ayant accès à l'administration.</p>
     <a href="{{ route('admin.users.create') }}" class="btn-primary">+ Ajouter un membre</a>
@@ -58,6 +65,13 @@
                         <td class="px-4 py-3"><span class="badge {{ $u->is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' }}">{{ $u->is_active ? 'Actif' : 'Désactivé' }}</span></td>
                         <td class="px-4 py-3 text-end">
                             <a href="{{ route('admin.users.edit', $u) }}" class="text-brand-700 hover:underline">Modifier</a>
+                            @if (auth()->user()->isFullAdmin())
+                                <form action="{{ route('admin.users.password', $u) }}" method="post" class="ms-2 inline"
+                                      onsubmit="return confirm('Générer un nouveau mot de passe pour {{ $u->name }} ?')">
+                                    @csrf
+                                    <button class="text-amber-600 hover:underline" title="Générer un nouveau mot de passe">Mot de passe</button>
+                                </form>
+                            @endif
                             @if ($u->id !== auth()->id())
                                 <form action="{{ route('admin.users.destroy', $u) }}" method="post" class="ms-2 inline" onsubmit="return confirm('Supprimer ce membre ?')">
                                     @csrf @method('DELETE')

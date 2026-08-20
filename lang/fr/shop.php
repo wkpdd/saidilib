@@ -107,6 +107,15 @@ return [
     'view_order'       => 'Voir la commande',
     'sign_in'          => 'Se connecter',
 
+    // Password reset
+    'forgot_password'      => 'Mot de passe oublié ?',
+    'forgot_password_hint' => 'Indiquez votre email : nous vous enverrons un lien pour choisir un nouveau mot de passe.',
+    'send_reset_link'      => 'Envoyer le lien',
+    'password_link_sent'   => 'Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé.',
+    'new_password'         => 'Nouveau mot de passe',
+    'save_password'        => 'Enregistrer le mot de passe',
+    'password_changed'     => 'Mot de passe modifié. Vous pouvez vous connecter.',
+
     // Sharing
     'share_product'    => 'Partager ce produit',
     'share'            => 'Partager',
@@ -144,7 +153,6 @@ return [
     'pack_promo'        => 'Prix pack',
     'pack_view'         => 'Voir le pack',
     'pack_items_count'  => 'articles',
-];
     'invalid_phone' => 'Numéro de téléphone invalide (ex. 0550 50 50 50).',
     'unknown_commune' => "Cette commune n'est pas desservie — choisissez-en une dans la liste.",
     'select_commune' => 'Choisissez votre commune',
@@ -153,3 +161,4 @@ return [
     'pack_qty' => "Packs",
     'remove_pack' => "Retirer le pack",
     'pack_removed' => "Pack retiré du panier.",
+];

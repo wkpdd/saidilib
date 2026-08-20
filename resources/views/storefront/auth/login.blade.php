@@ -17,9 +17,12 @@
             <input name="email" type="email" value="{{ old('email') }}" required autofocus class="input mb-4">
             <label class="label">{{ __('shop.password') }}</label>
             <input name="password" type="password" required class="input mb-4">
-            <label class="mb-4 flex items-center gap-2 text-sm text-ink-700">
-                <input type="checkbox" name="remember" class="rounded border-slate-300"> {{ __('shop.remember_me') }}
-            </label>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <label class="flex items-center gap-2 text-sm text-ink-700">
+                    <input type="checkbox" name="remember" class="rounded border-slate-300"> {{ __('shop.remember_me') }}
+                </label>
+                <a href="{{ route('account.password.request') }}" class="text-sm font-medium text-brand-700 hover:underline">{{ __('shop.forgot_password') }}</a>
+            </div>
             <button class="btn-primary w-full">{{ __('shop.sign_in') }}</button>
         </form>
 

@@ -51,6 +51,14 @@ Route::prefix('compte')->name('account.')->group(function () {
         ->middleware('throttle:10,1');
     Route::post('/deconnexion', [Auth\ClientAuthController::class, 'logout'])->name('logout');
 
+    // Forgotten password (emailed link — needs a real mailer configured).
+    Route::get('/mot-de-passe-oublie', [Auth\ClientPasswordController::class, 'showRequest'])->name('password.request');
+    Route::post('/mot-de-passe-oublie', [Auth\ClientPasswordController::class, 'sendLink'])->name('password.email')
+        ->middleware('throttle:6,1');
+    Route::get('/mot-de-passe/{token}', [Auth\ClientPasswordController::class, 'showReset'])->name('password.reset');
+    Route::post('/mot-de-passe', [Auth\ClientPasswordController::class, 'reset'])->name('password.update')
+        ->middleware('throttle:6,1');
+
     Route::middleware('auth:client')->group(function () {
         Route::get('/', [AccountController::class, 'index'])->name('index');
         Route::get('/tarifs.pdf', [AccountController::class, 'priceList'])->name('pricelist');
@@ -103,6 +111,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::get('clients/pricelist.pdf', [Admin\ClientController::class, 'priceList'])->name('clients.pricelist');
         Route::resource('clients', Admin\ClientController::class);
         Route::post('clients/{client}/transactions', [Admin\ClientController::class, 'addTransaction'])->name('clients.transactions.store');
+        Route::post('clients/{client}/password', [Admin\ClientController::class, 'resetPassword'])->name('clients.password');
     });
 
     // Lost / broken inventory incidents
@@ -133,6 +142,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Team / staff — requires the "users" permission.
     Route::middleware('perm:users')->group(function () {
         Route::resource('users', Admin\UserController::class)->except('show');
+        Route::post('users/{user}/password', [Admin\UserController::class, 'resetPassword'])->name('users.password');
     });
 
     Route::middleware('perm:orders')->group(function () {
