@@ -32,11 +32,22 @@ class Pack extends Model
         return $this->tr('description');
     }
 
-    /** Sum of the items at their current catalogue prices (variant delta included). */
+    /**
+     * Only items whose product is present AND active are sellable — this is the
+     * exact set PackController::addToCart() distributes the price over. Counting
+     * an inactive/removed product here would inflate the sum/promo and make the
+     * last cart line absorb the missing item's value (silent overcharge).
+     */
+    public function sellableItems()
+    {
+        return $this->items->filter(fn ($item) => $item->product && $item->product->is_active)->values();
+    }
+
+    /** Sum of the SELLABLE items at their current catalogue prices (variant delta included). */
     public function getItemsTotalAttribute(): float
     {
-        return (float) $this->items->sum(function ($item) {
-            $base = (float) ($item->product->price ?? 0) + (float) ($item->variant->price_delta ?? 0);
+        return (float) $this->sellableItems()->sum(function ($item) {
+            $base = (float) $item->product->price + (float) ($item->variant->price_delta ?? 0);
 
             return $base * $item->quantity;
         });

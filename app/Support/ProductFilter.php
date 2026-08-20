@@ -118,7 +118,7 @@ class ProductFilter
         };
     }
 
-    /** Category + its children, or null when browsing everything. */
+    /** Category + ALL descendants (any depth), or null when browsing everything. */
     private function categoryIds(): ?Collection
     {
         if ($this->scope) {
@@ -132,7 +132,7 @@ class ProductFilter
 
         $category = Category::where('slug', $slug)->first();
 
-        return $category ? $category->children->pluck('id')->push($category->id) : null;
+        return $category ? collect($category->descendantIds()) : null;
     }
 
     /** @return array<int, string> */

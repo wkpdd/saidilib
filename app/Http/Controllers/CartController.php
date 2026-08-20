@@ -26,7 +26,7 @@ class CartController extends Controller
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
             'variant_id' => 'nullable|exists:product_variants,id',
-            'qty'        => 'nullable|integer|min:1',
+            'qty'        => 'nullable|integer|min:1|max:999',
             'buy_now'    => 'nullable|boolean',
         ]);
 
@@ -59,9 +59,11 @@ class CartController extends Controller
         }
 
         // Apply the logged-in client's pricing tier (retail / wholesale / super).
+        // Floor at 0 so a misconfigured negative variant price_delta can never
+        // produce a negative line total (which would discount the whole order).
         $client = \Illuminate\Support\Facades\Auth::guard('client')->user();
-        $unitPrice = $product->priceForTier($client?->type)
-            + ($variant ? (float) $variant->price_delta : 0);
+        $unitPrice = max(0, $product->priceForTier($client?->type)
+            + ($variant ? (float) $variant->price_delta : 0));
 
         $this->cart->add($product, $variant, $qty, $unitPrice);
 

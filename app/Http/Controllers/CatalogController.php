@@ -17,7 +17,16 @@ class CatalogController extends Controller
         $products = $filter->apply(Product::active()->with('category', 'images'))
             ->paginate(12)->withQueryString();
 
-        $categories = Category::active()->whereNull('parent_id')->withCount('products')->orderBy('sort_order')->get();
+        // Top-level categories with a count spanning their WHOLE subtree
+        // (a category like "Scolaire" holds most of its products in nested
+        // sub-categories, not directly).
+        $categories = Category::active()->whereNull('parent_id')->orderBy('sort_order')->get();
+        $countsByCat = Product::active()->selectRaw('category_id, COUNT(*) as c')
+            ->groupBy('category_id')->pluck('c', 'category_id');
+        foreach ($categories as $cat) {
+            $cat->products_count = collect($cat->descendantIds())
+                ->sum(fn ($id) => (int) ($countsByCat[$id] ?? 0));
+        }
         $activeCategory = $request->query('category')
             ? Category::where('slug', $request->query('category'))->first()
             : null;
@@ -54,9 +63,8 @@ class CatalogController extends Controller
         $products = $filter->apply($category->products()->active()->with('images'))
             ->paginate(12)->withQueryString();
 
-        // Total including subcategories (shown in the header).
-        $descendantIds = $category->children->pluck('id')->push($category->id);
-        $totalCount = Product::active()->whereIn('category_id', $descendantIds)->count();
+        // Total across the WHOLE subtree, at any depth (shown in the header).
+        $totalCount = Product::active()->whereIn('category_id', $category->descendantIds())->count();
 
         \App\Support\ShopTrail::rememberListing($request->fullUrl());
 

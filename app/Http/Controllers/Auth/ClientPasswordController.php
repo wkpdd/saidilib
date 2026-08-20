@@ -30,12 +30,11 @@ class ClientPasswordController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::broker('clients')->sendResetLink($request->only('email'));
-
-        // Never reveal whether the address exists.
-        if ($status === Password::RESET_THROTTLED) {
-            return back()->withErrors(['email' => __($status)])->onlyInput('email');
-        }
+        // Fire-and-forget: the broker sends a link only if the address exists,
+        // but we ALWAYS return the same neutral message — including on
+        // RESET_THROTTLED, which the broker returns only for a real account and
+        // therefore used to leak whether an address is registered.
+        Password::broker('clients')->sendResetLink($request->only('email'));
 
         return back()->with('success', __('shop.password_link_sent'));
     }

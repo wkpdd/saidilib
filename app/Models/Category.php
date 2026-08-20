@@ -34,6 +34,37 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    /**
+     * IDs of this category AND every descendant, at any depth (Scolaire → its
+     * sub-categories → their sub-categories …). Used so product counts and the
+     * category filter cover the whole subtree, not just direct children.
+     */
+    public function descendantIds(): array
+    {
+        return static::subtreeIds($this->id);
+    }
+
+    /** Subtree IDs for a root id. The (id,parent_id) map is loaded once per request. */
+    public static function subtreeIds(int $rootId): array
+    {
+        static $byParent = null;
+        if ($byParent === null) {
+            $byParent = static::query()->get(['id', 'parent_id'])->groupBy('parent_id');
+        }
+
+        $ids = [$rootId];
+        $stack = [$rootId];
+        while ($stack) {
+            $pid = array_pop($stack);
+            foreach ($byParent->get($pid, collect()) as $child) {
+                $ids[] = (int) $child->id;
+                $stack[] = (int) $child->id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
     public function getNameAttribute(): string
     {
         return $this->tr('name') ?? '';

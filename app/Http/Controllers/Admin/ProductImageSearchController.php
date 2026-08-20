@@ -45,11 +45,20 @@ class ProductImageSearchController extends Controller
         }
 
         try {
-            $res = Http::timeout(15)->withOptions(['stream' => false])->get($url);
+            // Do NOT follow redirects: guardUrl() only vetted the initial host,
+            // so a public URL that 302s to 127.0.0.1 / an internal address would
+            // otherwise defeat the SSRF guard. Any 3xx is rejected below.
+            $res = Http::timeout(15)
+                ->withOptions(['stream' => false, 'allow_redirects' => false])
+                ->get($url);
         } catch (\Throwable $e) {
             Log::warning('Image search fetch failed', ['url' => $url, 'error' => $e->getMessage()]);
 
             return response()->json(['ok' => false, 'error' => "Impossible de télécharger cette image."], 422);
+        }
+
+        if ($res->redirect()) {
+            return response()->json(['ok' => false, 'error' => "L'image redirige vers une autre adresse — refusé pour des raisons de sécurité."], 422);
         }
 
         if (! $res->successful()) {
